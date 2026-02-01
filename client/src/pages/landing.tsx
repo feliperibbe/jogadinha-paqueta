@@ -1,16 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Upload, Share2 } from "lucide-react";
+import { Upload, Share2, Sparkles } from "lucide-react";
+import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-md gradient-flamengo flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
             <span className="font-display text-2xl tracking-wide">JOGADINHA DO PAQUETÁ</span>
           </div>
           <Button asChild data-testid="button-login-header">
@@ -105,8 +104,9 @@ export default function Landing() {
       </main>
 
       <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>© 2026 Jogadinha do Paquetá. Feito com amor para a Nação Rubro-Negra.</p>
+        <div className="container mx-auto px-4 flex flex-col items-center gap-4">
+          <img src={logoImage} alt="Logo" className="w-12 h-12 rounded-md object-cover" />
+          <p className="text-muted-foreground text-sm">© 2026 Jogadinha do Paquetá. Feito com amor para a Nação Rubro-Negra.</p>
         </div>
       </footer>
     </div>

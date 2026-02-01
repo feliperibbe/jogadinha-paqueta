@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   Download, 
   Share2, 
-  Sparkles,
   Play,
   Pause,
   RotateCcw,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { SiWhatsapp, SiX, SiInstagram, SiTiktok } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
+import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
 interface PublicVideo {
   id: string;
@@ -175,10 +175,8 @@ export default function VideoPublicPage() {
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-10 h-10 rounded-md gradient-flamengo flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
+            <div className="flex items-center gap-3 cursor-pointer">
+              <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
               <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
             </div>
           </Link>

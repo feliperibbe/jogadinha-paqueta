@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, X, Sparkles, ArrowLeft, LogOut, ImageIcon, Loader2 } from "lucide-react";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
+import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
 export default function Criar() {
   const { user, logout, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -171,7 +172,7 @@ export default function Criar() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Sparkles className="w-12 h-12 text-primary mx-auto animate-pulse" />
+          <img src={logoImage} alt="Logo" className="w-16 h-16 mx-auto animate-pulse rounded-md" />
           <p className="mt-4 text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -185,13 +186,11 @@ export default function Criar() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="w-10 h-10 rounded-md gradient-flamengo flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
             <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
           </div>
           <div className="flex items-center gap-3">

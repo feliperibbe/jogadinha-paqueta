@@ -12,7 +12,6 @@ import {
   ArrowLeft, 
   Download, 
   Share2, 
-  Sparkles, 
   LogOut,
   Play,
   Pause,
@@ -25,6 +24,7 @@ import {
 import { SiWhatsapp, SiX, SiInstagram, SiTiktok } from "react-icons/si";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/auth-utils";
 import type { GeneratedVideo } from "@shared/schema";
+import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
 function ShareButton({ 
   platform, 
@@ -203,9 +203,7 @@ export default function VideoPage() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="w-10 h-10 rounded-md gradient-flamengo flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
             <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
           </div>
           <div className="flex items-center gap-3">
