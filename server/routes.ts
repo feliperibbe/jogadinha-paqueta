@@ -1,16 +1,155 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import { wavespeedService } from "./wavespeed";
+
+const generateVideoSchema = z.object({
+  imagePath: z.string().min(1, "Caminho da imagem é obrigatório"),
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  await setupAuth(app);
+  registerAuthRoutes(app);
+  
+  registerObjectStorageRoutes(app);
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  const objectStorageService = new ObjectStorageService();
+
+  app.get("/api/videos", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const videos = await storage.getVideosByUserId(userId);
+      res.json(videos);
+    } catch (error) {
+      console.error("Error fetching videos:", error);
+      res.status(500).json({ message: "Erro ao buscar vídeos" });
+    }
+  });
+
+  app.get("/api/videos/public/:id", async (req, res) => {
+    try {
+      const video = await storage.getVideoById(req.params.id);
+      
+      if (!video) {
+        return res.status(404).json({ message: "Vídeo não encontrado" });
+      }
+
+      if (video.status !== "completed") {
+        return res.status(403).json({ message: "Vídeo ainda não está disponível" });
+      }
+
+      res.json({
+        id: video.id,
+        generatedVideoUrl: video.generatedVideoUrl,
+        status: video.status,
+        createdAt: video.createdAt,
+      });
+    } catch (error) {
+      console.error("Error fetching public video:", error);
+      res.status(500).json({ message: "Erro ao buscar vídeo" });
+    }
+  });
+
+  app.get("/api/videos/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const video = await storage.getVideoById(req.params.id);
+      
+      if (!video) {
+        return res.status(404).json({ message: "Vídeo não encontrado" });
+      }
+
+      if (video.userId !== userId) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+
+      if ((video.status === "pending" || video.status === "processing") && video.wavespeedRequestId) {
+        try {
+          const result = await wavespeedService.checkVideoStatus(video.wavespeedRequestId);
+          
+          if (result.status !== video.status) {
+            const updatedVideo = await storage.updateVideo(video.id, {
+              status: result.status,
+              generatedVideoUrl: result.videoUrl || null,
+              errorMessage: result.error || null,
+            });
+            return res.json(updatedVideo);
+          }
+        } catch (checkError) {
+          console.error("Error checking video status:", checkError);
+        }
+      }
+
+      res.json(video);
+    } catch (error) {
+      console.error("Error fetching video:", error);
+      res.status(500).json({ message: "Erro ao buscar vídeo" });
+    }
+  });
+
+  app.post("/api/videos/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const parseResult = generateVideoSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: parseResult.error.errors[0]?.message || "Dados inválidos" 
+        });
+      }
+      
+      const { imagePath } = parseResult.data;
+
+      const video = await storage.createVideo({
+        userId,
+        sourceImagePath: imagePath,
+        status: "pending",
+      });
+
+      res.json(video);
+
+      setImmediate(async () => {
+        try {
+          let imageUrl = imagePath;
+          
+          if (imagePath.startsWith("/objects/")) {
+            const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : process.env.REPLIT_DOMAINS?.split(",")[0]
+                ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+                : "http://localhost:5000";
+            imageUrl = `${baseUrl}${imagePath}`;
+          }
+
+          await storage.updateVideo(video.id, { status: "processing" });
+
+          const requestId = await wavespeedService.submitVideoGeneration(imageUrl);
+
+          await storage.updateVideo(video.id, {
+            wavespeedRequestId: requestId,
+            status: "processing",
+          });
+
+        } catch (error) {
+          console.error("Error submitting video generation:", error);
+          await storage.updateVideo(video.id, {
+            status: "failed",
+            errorMessage: error instanceof Error ? error.message : "Erro desconhecido",
+          });
+        }
+      });
+
+    } catch (error) {
+      console.error("Error creating video:", error);
+      res.status(500).json({ message: "Erro ao criar vídeo" });
+    }
+  });
 
   return httpServer;
 }
