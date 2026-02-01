@@ -204,6 +204,28 @@ export async function registerRoutes(
           credits: user.credits 
         });
       }
+
+      const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() 
+        || req.socket?.remoteAddress 
+        || "unknown";
+
+      const userVideos = await storage.getVideosByUserId(userId);
+      const userPayments = await storage.getPaymentRequestsByUserId(userId);
+      const hasApprovedPayment = userPayments.some(p => p.status === "approved");
+      
+      const isUsingFreeCredit = userVideos.length === 0 && user.credits === 1 && !hasApprovedPayment;
+
+      if (isUsingFreeCredit && clientIp !== "unknown") {
+        const existingUsage = await storage.checkIpUsedFreeVideo(clientIp, 30);
+        
+        if (existingUsage) {
+          return res.status(403).json({
+            message: "Este dispositivo já foi usado para gerar um vídeo grátis recentemente. Faça um pagamento para continuar.",
+            ipBlocked: true,
+            needsPayment: true
+          });
+        }
+      }
       
       const parseResult = generateVideoSchema.safeParse(req.body);
       if (!parseResult.success) {
@@ -224,6 +246,8 @@ export async function registerRoutes(
 
       res.json(video);
 
+      const shouldRecordIp = isUsingFreeCredit && clientIp !== "unknown";
+
       setImmediate(async () => {
         try {
           await storage.updateVideo(video.id, { status: "processing" });
@@ -234,6 +258,11 @@ export async function registerRoutes(
             wavespeedRequestId: requestId,
             status: "processing",
           });
+
+          if (shouldRecordIp) {
+            await storage.recordFreeVideoUsage(userId, clientIp);
+            console.log(`Recorded free video usage for IP ${clientIp}`);
+          }
 
         } catch (error) {
           console.error("Error submitting video generation:", error);
