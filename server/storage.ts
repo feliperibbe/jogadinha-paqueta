@@ -2,15 +2,17 @@ import {
   users, 
   generatedVideos,
   paymentRequests,
+  freeVideoUsage,
   type User, 
   type UpsertUser,
   type GeneratedVideo,
   type InsertGeneratedVideo,
   type PaymentRequest,
-  type InsertPaymentRequest
+  type InsertPaymentRequest,
+  type FreeVideoUsage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, gte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -30,6 +32,9 @@ export interface IStorage {
   getPaymentRequestsByUserId(userId: string): Promise<PaymentRequest[]>;
   getPaymentRequestByToken(token: string): Promise<(PaymentRequest & { user: User | null }) | undefined>;
   approvePaymentRequest(id: string, approvedBy: string): Promise<PaymentRequest | undefined>;
+  
+  checkIpUsedFreeVideo(ipAddress: string, daysBack: number): Promise<FreeVideoUsage | undefined>;
+  recordFreeVideoUsage(userId: string, ipAddress: string): Promise<FreeVideoUsage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -194,6 +199,33 @@ export class DatabaseStorage implements IStorage {
     }
 
     return updated || undefined;
+  }
+
+  async checkIpUsedFreeVideo(ipAddress: string, daysBack: number): Promise<FreeVideoUsage | undefined> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    
+    const [usage] = await db
+      .select()
+      .from(freeVideoUsage)
+      .where(
+        and(
+          eq(freeVideoUsage.ipAddress, ipAddress),
+          gte(freeVideoUsage.usedAt, cutoffDate)
+        )
+      )
+      .limit(1);
+    
+    return usage || undefined;
+  }
+
+  async recordFreeVideoUsage(userId: string, ipAddress: string): Promise<FreeVideoUsage> {
+    const [usage] = await db
+      .insert(freeVideoUsage)
+      .values({ userId, ipAddress })
+      .returning();
+    
+    return usage;
   }
 }
 

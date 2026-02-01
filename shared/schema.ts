@@ -30,6 +30,13 @@ export const generatedVideos = pgTable("generated_videos", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const freeVideoUsage = pgTable("free_video_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  ipAddress: varchar("ip_address", { length: 45 }).notNull(),
+  usedAt: timestamp("used_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   videos: many(generatedVideos),
   paymentRequests: many(paymentRequests),
@@ -66,3 +73,4 @@ export type InsertGeneratedVideo = z.infer<typeof insertGeneratedVideoSchema>;
 export type GeneratedVideo = typeof generatedVideos.$inferSelect;
 export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
+export type FreeVideoUsage = typeof freeVideoUsage.$inferSelect;
