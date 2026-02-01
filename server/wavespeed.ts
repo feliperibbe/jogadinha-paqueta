@@ -97,7 +97,7 @@ export class WavespeedService {
     
     const requestBody = {
       image: signedImageUrl,
-      video_url: referenceVideoUrl,
+      video: referenceVideoUrl,
       keep_original_sound: true,
     };
     console.log(`Request body keys: ${Object.keys(requestBody).join(', ')}`);
