@@ -1,5 +1,4 @@
 const WAVESPEED_API_URL = "https://api.wavespeed.ai/api/v3";
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
 interface WavespeedSubmitResponse {
   code: number;
@@ -27,41 +26,8 @@ interface WavespeedResultResponse {
   };
 }
 
-async function signObjectURL({
-  bucketName,
-  objectName,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method: "GET",
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to sign object URL: ${response.status}`);
-  }
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
-}
-
 export class WavespeedService {
   private apiKey: string;
-  private bucketId: string;
 
   constructor() {
     const apiKey = process.env.WAVESPEED_API_KEY;
@@ -69,65 +35,47 @@ export class WavespeedService {
       throw new Error("WAVESPEED_API_KEY environment variable is required");
     }
     this.apiKey = apiKey;
-    
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) {
-      throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID environment variable is required");
-    }
-    this.bucketId = bucketId;
     console.log("WaveSpeed service initialized");
   }
 
-  private async getReferenceVideoUrl(): Promise<string> {
-    return signObjectURL({
-      bucketName: this.bucketId,
-      objectName: "public/reference-dance.mp4",
-      ttlSec: 3600,
-    });
-  }
-
-  async getSignedImageUrl(imagePath: string): Promise<string> {
-    // imagePath comes as /objects/uploads/uuid
-    // PRIVATE_OBJECT_DIR is like /bucket-name/.private
-    // We need to extract just the .private part for the object name
-    const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
-    
-    // Remove leading slash and bucket name if present
-    let objectPrefix = privateDir;
-    if (objectPrefix.startsWith("/")) {
-      objectPrefix = objectPrefix.slice(1);
+  private getBaseUrl(): string {
+    // Use Replit's public domain for external access
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      return `https://${process.env.REPLIT_DEV_DOMAIN}`;
     }
-    // If it starts with the bucket ID, remove it
-    if (objectPrefix.startsWith(this.bucketId)) {
-      objectPrefix = objectPrefix.slice(this.bucketId.length);
-      if (objectPrefix.startsWith("/")) {
-        objectPrefix = objectPrefix.slice(1);
+    if (process.env.REPLIT_DOMAINS) {
+      const domain = process.env.REPLIT_DOMAINS.split(",")[0];
+      if (domain) {
+        return `https://${domain}`;
       }
     }
-    
-    const relativePath = imagePath.replace("/objects/", "");
-    const objectName = `${objectPrefix}/${relativePath}`;
-    
-    console.log(`Signing image URL for object: ${objectName}`);
-    
-    return signObjectURL({
-      bucketName: this.bucketId,
-      objectName,
-      ttlSec: 3600,
-    });
+    return "http://localhost:5000";
+  }
+
+  private getReferenceVideoUrl(): string {
+    // Use our Express server endpoint which proxies the video
+    const baseUrl = this.getBaseUrl();
+    return `${baseUrl}/api/reference-video`;
+  }
+
+  getImageUrl(imagePath: string): string {
+    // Use our Express server endpoint which proxies the image
+    // imagePath is like /objects/uploads/uuid
+    const baseUrl = this.getBaseUrl();
+    return `${baseUrl}${imagePath}`;
   }
 
   async submitVideoGeneration(imagePath: string): Promise<string> {
     console.log(`Starting video generation for imagePath: ${imagePath}`);
     
-    const referenceVideoUrl = await this.getReferenceVideoUrl();
-    console.log(`Reference video URL: ${referenceVideoUrl.substring(0, 100)}...`);
+    const referenceVideoUrl = this.getReferenceVideoUrl();
+    console.log(`Reference video URL: ${referenceVideoUrl}`);
     
-    const signedImageUrl = await this.getSignedImageUrl(imagePath);
-    console.log(`Signed image URL: ${signedImageUrl.substring(0, 100)}...`);
+    const imageUrl = this.getImageUrl(imagePath);
+    console.log(`Image URL: ${imageUrl}`);
     
     const requestBody = {
-      image: signedImageUrl,
+      image: imageUrl,
       video: referenceVideoUrl,
       character_orientation: "image",
       keep_original_sound: true,
