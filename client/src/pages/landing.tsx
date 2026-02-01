@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Upload, Share2, Video } from "lucide-react";
+import { Sparkles, Upload, Share2 } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -24,7 +24,7 @@ export default function Landing() {
           <div className="absolute inset-0 gradient-flamengo opacity-10" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
           
-          <div className="container mx-auto px-4 py-24 md:py-32 relative">
+          <div className="container mx-auto px-4 py-16 md:py-20 relative">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="font-display text-5xl md:text-7xl lg:text-8xl tracking-wide mb-6 leading-tight">
                 FAÇA SUA<br />
@@ -33,20 +33,14 @@ export default function Landing() {
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto">
                 Envie sua foto, espere alguns minutos e dance igual ao Paquetá!
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
-                  <a href="/api/login">Começar Agora</a>
-                </Button>
-                <Button size="lg" variant="outline" className="text-lg px-8" data-testid="button-demo">
-                  <Video className="w-5 h-5 mr-2" />
-                  Ver Exemplo
-                </Button>
-              </div>
+              <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
+                <a href="/api/login">Começar Agora</a>
+              </Button>
             </div>
           </div>
         </section>
 
-        <section className="py-20 bg-card/50">
+        <section className="py-12 bg-card/50">
           <div className="container mx-auto px-4">
             <h2 className="font-display text-3xl md:text-4xl text-center mb-12 tracking-wide">
               COMO FUNCIONA
@@ -85,7 +79,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="py-20">
+        <section className="py-12">
           <div className="container mx-auto px-4 text-center">
             <h2 className="font-display text-3xl md:text-4xl mb-6 tracking-wide">
               PRONTO PARA DANÇAR?
@@ -102,7 +96,7 @@ export default function Landing() {
 
       <footer className="border-t border-border py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>© 2024 Jogadinha do Paquetá. Feito com amor para a Nação Rubro-Negra.</p>
+          <p>© 2026 Jogadinha do Paquetá. Feito com amor para a Nação Rubro-Negra.</p>
         </div>
       </footer>
     </div>
