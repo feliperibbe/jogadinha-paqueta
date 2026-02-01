@@ -28,6 +28,7 @@ export interface IStorage {
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   getPendingPaymentRequests(): Promise<(PaymentRequest & { user: User | null })[]>;
   getPaymentRequestsByUserId(userId: string): Promise<PaymentRequest[]>;
+  getPaymentRequestByToken(token: string): Promise<(PaymentRequest & { user: User | null }) | undefined>;
   approvePaymentRequest(id: string, approvedBy: string): Promise<PaymentRequest | undefined>;
 }
 
@@ -147,6 +148,21 @@ export class DatabaseStorage implements IStorage {
       .from(paymentRequests)
       .where(eq(paymentRequests.userId, userId))
       .orderBy(desc(paymentRequests.createdAt));
+  }
+
+  async getPaymentRequestByToken(token: string): Promise<(PaymentRequest & { user: User | null }) | undefined> {
+    const [result] = await db
+      .select()
+      .from(paymentRequests)
+      .leftJoin(users, eq(paymentRequests.userId, users.id))
+      .where(eq(paymentRequests.approvalToken, token));
+    
+    if (!result) return undefined;
+    
+    return {
+      ...result.payment_requests,
+      user: result.users,
+    };
   }
 
   async approvePaymentRequest(id: string, approvedBy: string): Promise<PaymentRequest | undefined> {

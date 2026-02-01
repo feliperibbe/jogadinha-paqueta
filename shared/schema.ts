@@ -12,6 +12,7 @@ export const paymentRequests = pgTable("payment_requests", {
   userId: varchar("user_id").notNull().references(() => users.id),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 50 }).notNull().default("pending"),
+  approvalToken: varchar("approval_token").default(sql`gen_random_uuid()`),
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by"),

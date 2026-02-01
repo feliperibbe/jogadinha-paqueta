@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { wavespeedService } from "./wavespeed";
+import { sendPaymentNotification } from "./email";
 
 const generateVideoSchema = z.object({
   imagePath: z.string().min(1, "Caminho da imagem é obrigatório"),
@@ -291,6 +292,17 @@ export async function registerRoutes(
         status: "pending",
       });
 
+      const user = await storage.getUser(userId);
+      if (user && request.approvalToken) {
+        sendPaymentNotification({
+          paymentRequestId: request.id,
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Usuário',
+          userEmail: user.email || 'N/A',
+          amount: PIX_AMOUNT,
+          approvalToken: request.approvalToken,
+        }).catch(err => console.error("Failed to send payment notification:", err));
+      }
+
       res.json(request);
     } catch (error) {
       console.error("Error creating payment request:", error);
@@ -345,6 +357,119 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Erro ao buscar usuários" });
+    }
+  });
+
+  app.get("/api/admin/quick-approve/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      const paymentRequest = await storage.getPaymentRequestByToken(token);
+      
+      if (!paymentRequest) {
+        return res.status(404).send(`
+          <html>
+            <head><meta charset="utf-8"><title>Erro</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #1a1a1a; color: white;">
+              <h1>❌ Link inválido</h1>
+              <p>Esta solicitação de pagamento não foi encontrada.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      if (paymentRequest.status !== "pending") {
+        return res.status(400).send(`
+          <html>
+            <head><meta charset="utf-8"><title>Já aprovado</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #1a1a1a; color: white;">
+              <h1>✓ Já aprovado</h1>
+              <p>Este pagamento já foi aprovado anteriormente.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      await storage.approvePaymentRequest(paymentRequest.id, "email-approval");
+
+      const userName = paymentRequest.user 
+        ? `${paymentRequest.user.firstName || ''} ${paymentRequest.user.lastName || ''}`.trim()
+        : 'Usuário';
+
+      res.send(`
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Pagamento Aprovado</title>
+            <style>
+              body {
+                font-family: 'Inter', -apple-system, sans-serif;
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                color: white;
+                min-height: 100vh;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .card {
+                background: #111;
+                border-radius: 16px;
+                padding: 48px;
+                text-align: center;
+                border: 1px solid #333;
+                max-width: 400px;
+              }
+              .success-icon {
+                width: 80px;
+                height: 80px;
+                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 24px;
+                font-size: 40px;
+              }
+              h1 { 
+                color: #22c55e; 
+                margin: 0 0 16px; 
+                font-size: 24px;
+              }
+              p { 
+                color: #888; 
+                margin: 0 0 8px;
+                font-size: 16px;
+              }
+              .user-name {
+                color: white;
+                font-weight: 600;
+                font-size: 18px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="success-icon">✓</div>
+              <h1>Pagamento Aprovado!</h1>
+              <p>Crédito adicionado para:</p>
+              <p class="user-name">${userName}</p>
+              <p style="margin-top: 24px; font-size: 14px;">Pode fechar esta janela.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error("Error in quick approve:", error);
+      res.status(500).send(`
+        <html>
+          <head><meta charset="utf-8"><title>Erro</title></head>
+          <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #1a1a1a; color: white;">
+            <h1>❌ Erro</h1>
+            <p>Ocorreu um erro ao aprovar o pagamento. Tente novamente.</p>
+          </body>
+        </html>
+      `);
     }
   });
 
