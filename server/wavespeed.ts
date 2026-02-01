@@ -2,20 +2,29 @@ const WAVESPEED_API_URL = "https://api.wavespeed.ai/api/v3";
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
 interface WavespeedSubmitResponse {
-  id: string;
-  status: string;
-  urls?: {
-    get: string;
+  code: number;
+  message: string;
+  data: {
+    id: string;
+    model: string;
+    status: string;
+    outputs: string[];
+    urls: {
+      get: string;
+    };
+    error?: string;
   };
 }
 
 interface WavespeedResultResponse {
-  id: string;
-  status: string;
-  output?: {
-    video_url?: string;
+  code: number;
+  message: string;
+  data: {
+    id: string;
+    status: string;
+    outputs: string[];
+    error?: string;
   };
-  error?: string;
 }
 
 async function signObjectURL({
@@ -121,13 +130,19 @@ export class WavespeedService {
       throw new Error(`WaveSpeed API error: ${response.status}`);
     }
 
-    const data: WavespeedSubmitResponse = await response.json();
+    const responseText = await response.text();
+    console.log("WaveSpeed API response:", responseText);
     
-    if (!data.id) {
-      throw new Error("No request ID returned from WaveSpeed");
+    const result: WavespeedSubmitResponse = JSON.parse(responseText);
+    console.log("Parsed response - code:", result.code, "message:", result.message);
+    
+    if (result.code !== 200 || !result.data?.id) {
+      console.error("Full response data:", JSON.stringify(result, null, 2));
+      throw new Error(result.data?.error || result.message || "No request ID returned from WaveSpeed");
     }
 
-    return data.id;
+    console.log("Got request ID:", result.data.id);
+    return result.data.id;
   }
 
   async checkVideoStatus(requestId: string): Promise<{
@@ -151,13 +166,16 @@ export class WavespeedService {
       return { status: "failed", error: `API error: ${response.status}` };
     }
 
-    const data: WavespeedResultResponse = await response.json();
+    const result: WavespeedResultResponse = await response.json();
+    const data = result.data;
+    
+    console.log("Status check response - status:", data.status, "outputs:", data.outputs?.length || 0);
 
     switch (data.status) {
       case "completed":
       case "succeeded":
-        if (data.output?.video_url) {
-          return { status: "completed", videoUrl: data.output.video_url };
+        if (data.outputs && data.outputs.length > 0) {
+          return { status: "completed", videoUrl: data.outputs[0] };
         }
         return { status: "failed", error: "No video URL in response" };
       
@@ -167,6 +185,7 @@ export class WavespeedService {
       
       case "processing":
       case "running":
+      case "created":
         return { status: "processing" };
       
       default:
