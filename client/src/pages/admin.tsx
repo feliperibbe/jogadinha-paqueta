@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,31 +10,54 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, 
   LogOut, 
-  Check, 
-  Clock, 
   Loader2,
   Users,
-  CreditCard,
-  Shield
+  Video,
+  Shield,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { redirectToLogin } from "@/lib/auth-utils";
-import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
-import type { User } from "@shared/schema";
+import type { User, GeneratedVideo } from "@shared/schema";
 
-interface PaymentRequestWithUser {
-  id: string;
-  userId: string;
-  amount: string;
-  status: string;
-  createdAt: string;
-  user: User | null;
+function VideoStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "completed":
+      return (
+        <Badge variant="outline" className="gap-1 text-green-600 border-green-500/50">
+          <CheckCircle2 className="w-3 h-3" />
+          Pronto
+        </Badge>
+      );
+    case "processing":
+      return (
+        <Badge variant="outline" className="gap-1 text-blue-600 border-blue-500/50">
+          <Clock className="w-3 h-3" />
+          Processando
+        </Badge>
+      );
+    case "failed":
+      return (
+        <Badge variant="outline" className="gap-1 text-red-600 border-red-500/50">
+          <AlertCircle className="w-3 h-3" />
+          Erro
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Clock className="w-3 h-3" />
+          Pendente
+        </Badge>
+      );
+  }
 }
 
 export default function Admin() {
   const { user, logout, isLoading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -43,37 +66,15 @@ export default function Admin() {
     }
   }, [authLoading, isAuthenticated, toast]);
 
-  const { data: pendingPayments, isLoading: paymentsLoading } = useQuery<PaymentRequestWithUser[]>({
-    queryKey: ["/api/admin/payment-requests"],
-    enabled: isAuthenticated,
-    refetchInterval: 10000,
-  });
-
   const { data: allUsers, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     enabled: isAuthenticated,
   });
 
-  const approveMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest("POST", `/api/admin/payment-requests/${id}/approve`, {});
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Pagamento aprovado!",
-        description: "O usuário recebeu 1 crédito.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao aprovar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
-    },
+  const { data: allVideos, isLoading: videosLoading } = useQuery<GeneratedVideo[]>({
+    queryKey: ["/api/admin/videos"],
+    enabled: isAuthenticated,
+    refetchInterval: 10000,
   });
 
   if (authLoading) {
@@ -89,7 +90,8 @@ export default function Admin() {
 
   const firstName = user?.firstName || "Admin";
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | Date | null) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
@@ -98,6 +100,10 @@ export default function Admin() {
       minute: "2-digit",
     });
   };
+
+  const completedVideos = allVideos?.filter(v => v.status === "completed").length || 0;
+  const processingVideos = allVideos?.filter(v => v.status === "processing" || v.status === "pending").length || 0;
+  const failedVideos = allVideos?.filter(v => v.status === "failed").length || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,70 +138,74 @@ export default function Admin() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold">{allUsers?.length || 0}</p>
+              <p className="text-sm text-muted-foreground">Usuários</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-green-600">{completedVideos}</p>
+              <p className="text-sm text-muted-foreground">Vídeos Prontos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-blue-600">{processingVideos}</p>
+              <p className="text-sm text-muted-foreground">Processando</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-red-600">{failedVideos}</p>
+              <p className="text-sm text-muted-foreground">Erros</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" />
-              Pagamentos Pendentes
+              <Video className="w-5 h-5 text-primary" />
+              Vídeos Recentes
             </CardTitle>
             <CardDescription>
-              Aprove os pagamentos para liberar créditos aos usuários
+              Últimos vídeos gerados na plataforma
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {paymentsLoading ? (
+            {videosLoading ? (
               <div className="text-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
               </div>
-            ) : pendingPayments?.length === 0 ? (
+            ) : allVideos?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Nenhum pagamento pendente</p>
+                <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum vídeo gerado ainda</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {pendingPayments?.map((payment) => (
+              <div className="space-y-2">
+                {allVideos?.slice(0, 20).map((video) => (
                   <div
-                    key={payment.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    key={video.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={payment.user?.profileImageUrl || undefined} />
-                        <AvatarFallback className="bg-muted">
-                          {payment.user?.firstName?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+                        <Video className="w-5 h-5 text-muted-foreground" />
+                      </div>
                       <div>
-                        <p className="font-medium">
-                          {payment.user?.firstName || "Usuário"} {payment.user?.lastName || ""}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {payment.user?.email}
+                        <p className="text-sm font-medium truncate max-w-xs">
+                          {video.id.slice(0, 8)}...
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(payment.createdAt)}
+                          {formatDate(video.createdAt)}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">R$ {payment.amount}</Badge>
-                      <Button
-                        size="sm"
-                        onClick={() => approveMutation.mutate(payment.id)}
-                        disabled={approveMutation.isPending}
-                        data-testid={`button-approve-${payment.id}`}
-                      >
-                        {approveMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-1" />
-                            Aprovar
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <VideoStatusBadge status={video.status} />
                   </div>
                 ))}
               </div>
@@ -244,9 +254,6 @@ export default function Admin() {
                         <p className="text-xs text-muted-foreground">{u.email}</p>
                       </div>
                     </div>
-                    <Badge variant="outline">
-                      {u.credits} crédito{u.credits !== 1 ? "s" : ""}
-                    </Badge>
                   </div>
                 ))}
               </div>

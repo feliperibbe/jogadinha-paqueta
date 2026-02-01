@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Video, LogOut, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Sparkles, Video, LogOut, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import type { GeneratedVideo } from "@shared/schema";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
@@ -78,6 +78,13 @@ function VideoCard({ video }: { video: GeneratedVideo }) {
             </Button>
           </Link>
         )}
+        {(video.status === "processing" || video.status === "pending") && (
+          <Link href={`/video/${video.id}`}>
+            <Button variant="outline" size="sm" className="w-full mt-3" data-testid={`button-check-status-${video.id}`}>
+              Acompanhar Status
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
@@ -104,6 +111,7 @@ export default function Home() {
   const { data: videos, isLoading: videosLoading } = useQuery<GeneratedVideo[]>({
     queryKey: ["/api/videos"],
     enabled: !!user,
+    refetchInterval: 5000,
   });
 
   if (authLoading) {
@@ -118,6 +126,7 @@ export default function Home() {
   }
 
   const firstName = user?.firstName || "Usuário";
+  const hasVideo = videos && videos.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,29 +162,31 @@ export default function Home() {
               Olá, {firstName}!
             </h1>
             <p className="text-muted-foreground mt-1">
-              Pronto para fazer mais uma jogadinha?
+              {hasVideo 
+                ? "Confira seu vídeo abaixo" 
+                : "Pronto para fazer sua jogadinha?"}
             </p>
           </div>
-          <Link href="/criar">
-            <Button size="lg" data-testid="button-create-video">
-              <Plus className="w-5 h-5 mr-2" />
-              Novo Vídeo
-            </Button>
-          </Link>
+          {!hasVideo && (
+            <Link href="/criar">
+              <Button size="lg" data-testid="button-create-video">
+                <Sparkles className="w-5 h-5 mr-2" />
+                Criar Meu Vídeo
+              </Button>
+            </Link>
+          )}
         </div>
 
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Video className="w-5 h-5 text-primary" />
-              Meus Vídeos
+              {hasVideo ? "Meu Vídeo" : "Meus Vídeos"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {videosLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <VideoCardSkeleton />
-                <VideoCardSkeleton />
                 <VideoCardSkeleton />
               </div>
             ) : videos && videos.length > 0 ? (
@@ -189,12 +200,12 @@ export default function Home() {
                 <Video className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">Nenhum vídeo ainda</h3>
                 <p className="text-muted-foreground mb-4">
-                  Crie seu primeiro vídeo dançando!
+                  Crie seu vídeo dançando agora mesmo!
                 </p>
                 <Link href="/criar">
                   <Button data-testid="button-create-first-video">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Criar Meu Primeiro Vídeo
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Criar Meu Vídeo
                   </Button>
                 </Link>
               </div>

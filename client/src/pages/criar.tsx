@@ -7,11 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Upload, X, Sparkles, ArrowLeft, LogOut, ImageIcon, Loader2, Coins } from "lucide-react";
+import { Upload, X, Sparkles, ArrowLeft, LogOut, ImageIcon, Loader2, CheckCircle2 } from "lucide-react";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
+
+interface CanGenerateData {
+  canGenerate: boolean;
+  hasVideo: boolean;
+  hasCompletedVideo: boolean;
+  hasPendingVideo: boolean;
+  videoCount: number;
+}
 
 export default function Criar() {
   const { user, logout, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -24,12 +31,10 @@ export default function Criar() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: creditsData, isLoading: creditsLoading } = useQuery<{ credits: number }>({
-    queryKey: ["/api/user/credits"],
+  const { data: canGenerateData, isLoading: canGenerateLoading } = useQuery<CanGenerateData>({
+    queryKey: ["/api/user/can-generate"],
     enabled: isAuthenticated,
   });
-
-  const credits = creditsData?.credits ?? 0;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -44,6 +49,7 @@ export default function Criar() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/can-generate"] });
       toast({
         title: "Vídeo em processamento!",
         description: "Você será notificado quando estiver pronto.",
@@ -129,8 +135,12 @@ export default function Criar() {
   const handleSubmit = async () => {
     if (!selectedFile) return;
 
-    if (credits <= 0) {
-      navigate("/pagar");
+    if (!canGenerateData?.canGenerate) {
+      toast({
+        title: "Limite atingido",
+        description: "Você já gerou seu vídeo. Cada usuário pode gerar apenas um vídeo.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -170,10 +180,6 @@ export default function Criar() {
       setUploadProgress(100);
     } catch (error: any) {
       console.error("Upload error:", error);
-      if (error.message?.includes("402") || error.message?.includes("Créditos insuficientes")) {
-        navigate("/pagar");
-        return;
-      }
       toast({
         title: "Erro no upload",
         description: error instanceof Error ? error.message : "Tente novamente.",
@@ -185,7 +191,7 @@ export default function Criar() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || canGenerateLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -198,6 +204,56 @@ export default function Criar() {
 
   const firstName = user?.firstName || "Usuário";
   const isProcessing = isUploading || generateVideoMutation.isPending;
+  const canGenerate = canGenerateData?.canGenerate ?? true;
+
+  if (!canGenerate) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
+              <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user?.profileImageUrl || undefined} alt={firstName} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {firstName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium hidden sm:block">{firstName}</span>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => logout()} data-testid="button-logout">
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 max-w-2xl">
+          <Card className="text-center">
+            <CardContent className="py-12">
+              <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              </div>
+              <h2 className="font-display text-2xl mb-2">Você já criou seu vídeo!</h2>
+              <p className="text-muted-foreground mb-6">
+                Cada usuário pode gerar apenas um vídeo. Veja seu vídeo na página inicial.
+              </p>
+              <Button onClick={() => navigate("/")} data-testid="button-go-home">
+                Ver Meu Vídeo
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,10 +267,6 @@ export default function Criar() {
             <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="gap-1" data-testid="badge-credits">
-              <Coins className="w-3 h-3" />
-              {creditsLoading ? "..." : credits} crédito{credits !== 1 ? "s" : ""}
-            </Badge>
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={user?.profileImageUrl || undefined} alt={firstName} />
