@@ -17,6 +17,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserCredits(userId: string, credits: number): Promise<User | undefined>;
   deductUserCredit(userId: string): Promise<boolean>;
+  addUserCredit(userId: string): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
   
   getVideoById(id: string): Promise<GeneratedVideo | undefined>;
@@ -95,6 +96,18 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ 
         credits: sql`${users.credits} - 1`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async addUserCredit(userId: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ 
+        credits: sql`${users.credits} + 1`,
         updatedAt: new Date() 
       })
       .where(eq(users.id, userId))

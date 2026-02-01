@@ -17,6 +17,7 @@ import {
   QrCode,
   Smartphone
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { redirectToLogin } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
@@ -25,6 +26,7 @@ interface PixInfo {
   pixKey: string;
   amount: string;
   description: string;
+  pixCode: string;
 }
 
 interface PendingPayment {
@@ -212,6 +214,26 @@ export default function Pagar() {
                   <p className="text-sm text-muted-foreground">
                     por vídeo
                   </p>
+                </div>
+
+                {pixInfo?.pixCode && (
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm font-medium">Escaneie o QR Code:</p>
+                    <div className="bg-white p-4 rounded-lg">
+                      <QRCodeSVG 
+                        value={pixInfo.pixCode} 
+                        size={180}
+                        level="M"
+                        data-testid="pix-qrcode"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 border-t border-border"></div>
+                  <span className="text-xs text-muted-foreground">ou</span>
+                  <div className="flex-1 border-t border-border"></div>
                 </div>
 
                 <div className="space-y-3">

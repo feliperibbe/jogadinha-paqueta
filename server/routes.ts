@@ -12,7 +12,48 @@ const generateVideoSchema = z.object({
 
 const PIX_KEY = "21995571985";
 const PIX_AMOUNT = "5.00";
+const PIX_NAME = "JOGADINHA PAQUETA";
+const PIX_CITY = "Rio de Janeiro";
 const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
+
+function generatePixCode(key: string, amount: string, name: string, city: string): string {
+  const formatField = (id: string, value: string) => {
+    const len = value.length.toString().padStart(2, '0');
+    return `${id}${len}${value}`;
+  };
+
+  const merchantAccountInfo = formatField('00', 'BR.GOV.BCB.PIX') + formatField('01', key);
+  
+  let payload = '';
+  payload += formatField('00', '01');
+  payload += formatField('26', merchantAccountInfo);
+  payload += formatField('52', '0000');
+  payload += formatField('53', '986');
+  payload += formatField('54', amount);
+  payload += formatField('58', 'BR');
+  payload += formatField('59', name.substring(0, 25));
+  payload += formatField('60', city.substring(0, 15));
+  payload += formatField('62', formatField('05', '***'));
+
+  payload += '6304';
+
+  const crc16 = (str: string): string => {
+    let crc = 0xFFFF;
+    for (let i = 0; i < str.length; i++) {
+      crc ^= str.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        if ((crc & 0x8000) !== 0) {
+          crc = (crc << 1) ^ 0x1021;
+        } else {
+          crc <<= 1;
+        }
+      }
+    }
+    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+  };
+
+  return payload + crc16(payload);
+}
 
 const isAdmin = async (req: any, res: Response, next: NextFunction) => {
   if (!req.user) {
@@ -195,6 +236,8 @@ export async function registerRoutes(
 
         } catch (error) {
           console.error("Error submitting video generation:", error);
+          await storage.addUserCredit(userId);
+          console.log(`Refunded 1 credit to user ${userId} due to video generation failure`);
           await storage.updateVideo(video.id, {
             status: "failed",
             errorMessage: error instanceof Error ? error.message : "Erro desconhecido",
@@ -220,10 +263,12 @@ export async function registerRoutes(
   });
 
   app.get("/api/pix-info", isAuthenticated, async (req: any, res) => {
+    const pixCode = generatePixCode(PIX_KEY, PIX_AMOUNT, PIX_NAME, PIX_CITY);
     res.json({
       pixKey: PIX_KEY,
       amount: PIX_AMOUNT,
       description: "Jogadinha do Paquetá - 1 vídeo",
+      pixCode,
     });
   });
 
