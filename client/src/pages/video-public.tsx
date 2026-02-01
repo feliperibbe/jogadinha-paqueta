@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   Download, 
   Share2, 
+  Sparkles,
   Play,
   Pause,
   RotateCcw,

@@ -12,6 +12,7 @@ import {
   ArrowLeft, 
   Download, 
   Share2, 
+  Sparkles,
   LogOut,
   Play,
   Pause,
