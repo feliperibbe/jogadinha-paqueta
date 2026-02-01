@@ -66,6 +66,16 @@ shared/
 - **Notificações**: Email via Resend com link de aprovação rápida
 - **Reembolso Automático**: Se geração falhar, crédito é devolvido
 
+## Proteção Anti-Abuso
+
+- **Limite por IP**: Cada IP pode usar o vídeo grátis apenas 1 vez a cada 30 dias
+- **Regra de Crédito Grátis**: Usuário é considerado "grátis" apenas se:
+  - Não tem vídeos anteriores
+  - Tem exatamente 1 crédito
+  - Nunca teve pagamento aprovado
+- **Registro de IP**: IP é registrado apenas após geração bem-sucedida (não bloqueia em caso de falha)
+- **Usuários Pagantes**: Quem já fez pagamento aprovado não é afetado pelo limite de IP
+
 ## APIs
 
 ### Autenticação
