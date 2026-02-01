@@ -114,17 +114,74 @@ export default function VideoPublicPage() {
 
   const shareText = "Olha minha jogadinha do Paquetá! Crie a sua também:";
 
+  const hasNativeShare = () => {
+    return typeof navigator !== "undefined" && "share" in navigator;
+  };
+
+  const handleNativeShare = async (): Promise<boolean> => {
+    if (!hasNativeShare()) return false;
+    
+    const shareUrl = getShareUrl();
+    
+    // Try sharing with video file first (mobile)
+    if (video?.generatedVideoUrl) {
+      try {
+        const response = await fetch(video.generatedVideoUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `jogadinha-paqueta-${video.id}.mp4`, { type: "video/mp4" });
+        
+        const shareData = {
+          title: "Jogadinha do Paquetá",
+          text: shareText,
+          url: shareUrl,
+          files: [file],
+        };
+        
+        if (navigator.canShare && navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return true;
+        }
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return true;
+        console.log("File share failed, trying text+url share");
+      }
+    }
+    
+    // Fallback: share text + URL without file
+    try {
+      await navigator.share({
+        title: "Jogadinha do Paquetá",
+        text: shareText,
+        url: shareUrl,
+      });
+      return true;
+    } catch (error) {
+      if ((error as Error).name === "AbortError") return true;
+      console.log("Native share failed completely");
+    }
+    
+    return false;
+  };
+
   const handleShareWhatsApp = () => {
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + getShareUrl())}`;
     window.open(url, "_blank");
   };
 
-  const handleShareTwitter = () => {
+  const handleShareTwitter = async () => {
+    if (hasNativeShare()) {
+      const shared = await handleNativeShare();
+      if (shared) return;
+    }
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(getShareUrl())}`;
     window.open(url, "_blank");
   };
 
-  const handleShareInstagram = () => {
+  const handleShareInstagram = async () => {
+    if (hasNativeShare()) {
+      const shared = await handleNativeShare();
+      if (shared) return;
+    }
     toast({
       title: "Compartilhar no Instagram",
       description: "Baixe o vídeo e compartilhe no seu Stories ou Reels!",
@@ -132,7 +189,11 @@ export default function VideoPublicPage() {
     handleDownload();
   };
 
-  const handleShareTikTok = () => {
+  const handleShareTikTok = async () => {
+    if (hasNativeShare()) {
+      const shared = await handleNativeShare();
+      if (shared) return;
+    }
     toast({
       title: "Compartilhar no TikTok",
       description: "Baixe o vídeo e poste no TikTok!",
