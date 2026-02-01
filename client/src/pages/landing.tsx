@@ -31,7 +31,7 @@ export default function Landing() {
                 <span className="text-gradient-flamengo">JOGADINHA</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto">
-                Envie sua foto e veja a mágica acontecer! A inteligência artificial vai criar um vídeo incrível de você dançando.
+                Envie sua foto, espere alguns minutos e dance igual ao Paquetá!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
