@@ -33,9 +33,25 @@ export default function Landing() {
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto">
                 Envie sua foto, espere alguns minutos e dance igual ao Paquetá!
               </p>
-              <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
+              <Button size="lg" asChild className="text-lg px-8 mb-10" data-testid="button-start-hero">
                 <a href="/api/login">Começar Agora</a>
               </Button>
+              
+              <div className="mt-8">
+                <div className="relative max-w-sm mx-auto rounded-xl overflow-hidden shadow-2xl border-4 border-primary/20">
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full aspect-[9/16] object-cover"
+                    data-testid="video-demo"
+                  >
+                    <source src="/api/reference-video" type="video/mp4" />
+                  </video>
+                </div>
+                <p className="text-sm text-muted-foreground mt-4">Veja como fica!</p>
+              </div>
             </div>
           </div>
         </section>

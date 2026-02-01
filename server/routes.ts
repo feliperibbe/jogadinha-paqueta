@@ -21,6 +21,43 @@ export async function registerRoutes(
 
   const objectStorageService = new ObjectStorageService();
 
+  app.get("/api/reference-video", async (req, res) => {
+    try {
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ message: "Storage not configured" });
+      }
+
+      const { objectStorageClient } = await import("./replit_integrations/object_storage/objectStorage");
+      const bucket = objectStorageClient.bucket(bucketId);
+      const file = bucket.file("public/reference-dance.mp4");
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ message: "Reference video not found" });
+      }
+
+      const [metadata] = await file.getMetadata();
+      res.set({
+        "Content-Type": "video/mp4",
+        "Content-Length": metadata.size,
+        "Cache-Control": "public, max-age=86400",
+      });
+
+      const stream = file.createReadStream();
+      stream.on("error", (err) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error streaming video" });
+        }
+      });
+      stream.pipe(res);
+    } catch (error) {
+      console.error("Error serving reference video:", error);
+      res.status(500).json({ message: "Error serving video" });
+    }
+  });
+
   app.get("/api/videos", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
