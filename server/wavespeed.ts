@@ -88,13 +88,25 @@ export class WavespeedService {
 
   async getSignedImageUrl(imagePath: string): Promise<string> {
     // imagePath comes as /objects/uploads/uuid
-    // The actual GCS path is .private/uploads/uuid (based on PRIVATE_OBJECT_DIR)
+    // PRIVATE_OBJECT_DIR is like /bucket-name/.private
+    // We need to extract just the .private part for the object name
     const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
-    const cleanPrivateDir = privateDir.startsWith("/") 
-      ? privateDir.slice(1) 
-      : privateDir;
+    
+    // Remove leading slash and bucket name if present
+    let objectPrefix = privateDir;
+    if (objectPrefix.startsWith("/")) {
+      objectPrefix = objectPrefix.slice(1);
+    }
+    // If it starts with the bucket ID, remove it
+    if (objectPrefix.startsWith(this.bucketId)) {
+      objectPrefix = objectPrefix.slice(this.bucketId.length);
+      if (objectPrefix.startsWith("/")) {
+        objectPrefix = objectPrefix.slice(1);
+      }
+    }
+    
     const relativePath = imagePath.replace("/objects/", "");
-    const objectName = `${cleanPrivateDir}/${relativePath}`;
+    const objectName = `${objectPrefix}/${relativePath}`;
     
     console.log(`Signing image URL for object: ${objectName}`);
     
