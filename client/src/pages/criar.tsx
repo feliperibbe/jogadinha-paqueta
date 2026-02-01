@@ -1,13 +1,14 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, Sparkles, ArrowLeft, LogOut, ImageIcon, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Upload, X, Sparkles, ArrowLeft, LogOut, ImageIcon, Loader2, Coins } from "lucide-react";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
@@ -22,6 +23,13 @@ export default function Criar() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+
+  const { data: creditsData, isLoading: creditsLoading } = useQuery<{ credits: number }>({
+    queryKey: ["/api/user/credits"],
+    enabled: isAuthenticated,
+  });
+
+  const credits = creditsData?.credits ?? 0;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -121,6 +129,11 @@ export default function Criar() {
   const handleSubmit = async () => {
     if (!selectedFile) return;
 
+    if (credits <= 0) {
+      navigate("/pagar");
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(10);
 
@@ -155,8 +168,12 @@ export default function Criar() {
       setUploadProgress(70);
       await generateVideoMutation.mutateAsync(objectPath);
       setUploadProgress(100);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
+      if (error.message?.includes("402") || error.message?.includes("Créditos insuficientes")) {
+        navigate("/pagar");
+        return;
+      }
       toast({
         title: "Erro no upload",
         description: error instanceof Error ? error.message : "Tente novamente.",
@@ -194,6 +211,10 @@ export default function Criar() {
             <span className="font-display text-2xl tracking-wide hidden sm:block">JOGADINHA DO PAQUETÁ</span>
           </div>
           <div className="flex items-center gap-3">
+            <Badge variant="outline" className="gap-1" data-testid="badge-credits">
+              <Coins className="w-3 h-3" />
+              {creditsLoading ? "..." : credits} crédito{credits !== 1 ? "s" : ""}
+            </Badge>
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={user?.profileImageUrl || undefined} alt={firstName} />

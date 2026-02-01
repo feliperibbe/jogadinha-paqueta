@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
@@ -9,6 +9,22 @@ import { wavespeedService } from "./wavespeed";
 const generateVideoSchema = z.object({
   imagePath: z.string().min(1, "Caminho da imagem é obrigatório"),
 });
+
+const PIX_KEY = "21995571985";
+const PIX_AMOUNT = "5.00";
+const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
+
+const isAdmin = async (req: any, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Não autenticado" });
+  }
+  const userId = req.user.claims.sub;
+  const user = await storage.getUser(userId);
+  if (!user?.isAdmin) {
+    return res.status(403).json({ message: "Acesso negado - Admin only" });
+  }
+  next();
+};
 
 export async function registerRoutes(
   httpServer: Server,
@@ -134,6 +150,19 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (user.credits <= 0) {
+        return res.status(402).json({ 
+          message: "Créditos insuficientes",
+          needsPayment: true,
+          credits: user.credits 
+        });
+      }
+      
       const parseResult = generateVideoSchema.safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({ 
@@ -142,6 +171,8 @@ export async function registerRoutes(
       }
       
       const { imagePath } = parseResult.data;
+
+      await storage.deductUserCredit(userId);
 
       const video = await storage.createVideo({
         userId,
@@ -174,6 +205,123 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating video:", error);
       res.status(500).json({ message: "Erro ao criar vídeo" });
+    }
+  });
+
+  app.get("/api/user/credits", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json({ credits: user?.credits || 0 });
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+      res.status(500).json({ message: "Erro ao buscar créditos" });
+    }
+  });
+
+  app.get("/api/pix-info", isAuthenticated, async (req: any, res) => {
+    res.json({
+      pixKey: PIX_KEY,
+      amount: PIX_AMOUNT,
+      description: "Jogadinha do Paquetá - 1 vídeo",
+    });
+  });
+
+  app.post("/api/payment-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const existingPending = await storage.getPaymentRequestsByUserId(userId);
+      const hasPending = existingPending.some(p => p.status === "pending");
+      
+      if (hasPending) {
+        return res.status(400).json({ 
+          message: "Você já tem um pagamento pendente de aprovação" 
+        });
+      }
+
+      const request = await storage.createPaymentRequest({
+        userId,
+        amount: PIX_AMOUNT,
+        status: "pending",
+      });
+
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating payment request:", error);
+      res.status(500).json({ message: "Erro ao criar solicitação de pagamento" });
+    }
+  });
+
+  app.get("/api/payment-requests/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getPaymentRequestsByUserId(userId);
+      const pending = requests.find(p => p.status === "pending");
+      res.json({ hasPending: !!pending, pending });
+    } catch (error) {
+      console.error("Error checking pending payments:", error);
+      res.status(500).json({ message: "Erro ao verificar pagamentos" });
+    }
+  });
+
+  app.get("/api/admin/payment-requests", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getPendingPaymentRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching admin payment requests:", error);
+      res.status(500).json({ message: "Erro ao buscar solicitações" });
+    }
+  });
+
+  app.post("/api/admin/payment-requests/:id/approve", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      const updated = await storage.approvePaymentRequest(id, adminId);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Solicitação não encontrada" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error approving payment:", error);
+      res.status(500).json({ message: "Erro ao aprovar pagamento" });
+    }
+  });
+
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Erro ao buscar usuários" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/credits", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { credits } = req.body;
+      
+      if (typeof credits !== "number" || credits < 0) {
+        return res.status(400).json({ message: "Créditos inválidos" });
+      }
+
+      const updated = await storage.updateUserCredits(id, credits);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating credits:", error);
+      res.status(500).json({ message: "Erro ao atualizar créditos" });
     }
   });
 

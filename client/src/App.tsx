@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Criar from "@/pages/criar";
+import Pagar from "@/pages/pagar";
+import Admin from "@/pages/admin";
 import VideoPage from "@/pages/video";
 import VideoPublicPage from "@/pages/video-public";
 import NotFound from "@/pages/not-found";
@@ -30,6 +32,8 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/criar" component={Criar} />
+      <Route path="/pagar" component={Pagar} />
+      <Route path="/admin" component={Admin} />
       <Route path="/video/:id" component={VideoPage} />
       <Route path="/compartilhar/:id" component={VideoPublicPage} />
       <Route component={NotFound} />
