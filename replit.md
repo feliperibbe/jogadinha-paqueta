@@ -59,9 +59,11 @@ shared/
   1. Usuário sem créditos é redirecionado para `/pagar`
   2. Usuário faz PIX usando QR Code ou chave
   3. Usuário clica "Já paguei" para registrar solicitação
-  4. Admin aprova pagamento em `/admin`
-  5. Usuário recebe 1 crédito automaticamente
+  4. Admin recebe email com botão de aprovação rápida
+  5. Admin clica no link do email ou aprova em `/admin`
+  6. Usuário recebe 1 crédito automaticamente
 - **Admin**: felipe.vasconcellos@ab-inbev.com (isAdmin = true automático no login)
+- **Notificações**: Email via Resend com link de aprovação rápida
 - **Reembolso Automático**: Se geração falhar, crédito é devolvido
 
 ## APIs
@@ -89,6 +91,7 @@ shared/
 ### Admin
 - `GET /api/admin/payment-requests` - Listar pagamentos pendentes
 - `POST /api/admin/payment-requests/:id/approve` - Aprovar pagamento
+- `GET /api/admin/quick-approve/:token` - Aprovação rápida via email (sem auth)
 - `GET /api/admin/users` - Listar todos usuários
 
 ## Design
@@ -101,6 +104,7 @@ shared/
 ## Secrets Necessários
 
 - `WAVESPEED_API_KEY` - Chave da API WaveSpeed para Kling AI
+- `RESEND_API_KEY` - Chave da API Resend para notificações por email
 - `SESSION_SECRET` - Secret para sessões (gerenciado automaticamente)
 - `DATABASE_URL` - URL do PostgreSQL (gerenciado automaticamente)
 
