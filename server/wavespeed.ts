@@ -77,9 +77,21 @@ export class WavespeedService {
     });
   }
 
-  async submitVideoGeneration(imageUrl: string): Promise<string> {
+  async getSignedImageUrl(imagePath: string): Promise<string> {
+    const objectName = imagePath.replace("/objects/", "");
+    return signObjectURL({
+      bucketName: this.bucketId,
+      objectName,
+      ttlSec: 3600,
+    });
+  }
+
+  async submitVideoGeneration(imagePath: string): Promise<string> {
     const referenceVideoUrl = await this.getReferenceVideoUrl();
     console.log(`Using reference video URL: ${referenceVideoUrl.substring(0, 100)}...`);
+    
+    const signedImageUrl = await this.getSignedImageUrl(imagePath);
+    console.log(`Using signed image URL: ${signedImageUrl.substring(0, 100)}...`);
     
     const response = await fetch(
       `${WAVESPEED_API_URL}/kwaivgi/kling-v2.6-pro/motion-control`,
@@ -90,7 +102,7 @@ export class WavespeedService {
           "Authorization": `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          image_url: imageUrl,
+          image: signedImageUrl,
           video_url: referenceVideoUrl,
           keep_original_sound: true,
         }),

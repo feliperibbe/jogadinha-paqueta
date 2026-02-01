@@ -153,20 +153,9 @@ export async function registerRoutes(
 
       setImmediate(async () => {
         try {
-          let imageUrl = imagePath;
-          
-          if (imagePath.startsWith("/objects/")) {
-            const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-              : process.env.REPLIT_DOMAINS?.split(",")[0]
-                ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-                : "http://localhost:5000";
-            imageUrl = `${baseUrl}${imagePath}`;
-          }
-
           await storage.updateVideo(video.id, { status: "processing" });
 
-          const requestId = await wavespeedService.submitVideoGeneration(imageUrl);
+          const requestId = await wavespeedService.submitVideoGeneration(imagePath);
 
           await storage.updateVideo(video.id, {
             wavespeedRequestId: requestId,

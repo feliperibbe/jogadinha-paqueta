@@ -32,7 +32,7 @@ export default function Criar() {
   const generateVideoMutation = useMutation({
     mutationFn: async (imagePath: string) => {
       const response = await apiRequest("POST", "/api/videos/generate", { imagePath });
-      return response;
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
