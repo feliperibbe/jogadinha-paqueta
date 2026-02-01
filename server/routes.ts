@@ -61,7 +61,13 @@ const isAdmin = async (req: any, res: Response, next: NextFunction) => {
     return res.status(401).json({ message: "Não autenticado" });
   }
   const userId = req.user.claims.sub;
-  const user = await storage.getUser(userId);
+  let user = await storage.getUser(userId);
+  
+  // Fallback: if user not found by ID, try by email (handles OIDC ID mismatch)
+  if (!user && req.user.claims.email) {
+    user = await storage.getUserByEmail(req.user.claims.email);
+  }
+  
   if (!user?.isAdmin) {
     return res.status(403).json({ message: "Acesso negado - Admin only" });
   }
