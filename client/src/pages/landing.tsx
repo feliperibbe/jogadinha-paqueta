@@ -20,38 +20,32 @@ export default function Landing() {
       </header>
 
       <main className="pt-16">
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 gradient-flamengo opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+        <section className="relative overflow-hidden min-h-[80vh] flex items-center">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            data-testid="video-background"
+          >
+            <source src="/api/reference-video" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-background" />
           
-          <div className="container mx-auto px-4 py-16 md:py-20 relative">
+          <div className="container mx-auto px-4 py-16 md:py-20 relative z-10">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl tracking-wide mb-6 leading-tight">
+              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl tracking-wide mb-6 leading-tight text-white drop-shadow-lg">
                 FAÇA SUA<br />
                 <span className="text-gradient-flamengo">JOGADINHA</span>
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto">
+              <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl mx-auto drop-shadow">
                 Envie sua foto, espere alguns minutos e dance igual ao Paquetá!
               </p>
-              <Button size="lg" asChild className="text-lg px-8 mb-10" data-testid="button-start-hero">
+              <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
                 <a href="/api/login">Começar Agora</a>
               </Button>
-              
-              <div className="mt-8">
-                <div className="relative max-w-sm mx-auto rounded-xl overflow-hidden shadow-2xl border-4 border-primary/20">
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full aspect-[9/16] object-cover"
-                    data-testid="video-demo"
-                  >
-                    <source src="/api/reference-video" type="video/mp4" />
-                  </video>
-                </div>
-                <p className="text-sm text-muted-foreground mt-4">Veja como fica!</p>
-              </div>
             </div>
           </div>
         </section>
