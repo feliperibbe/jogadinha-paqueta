@@ -7,6 +7,7 @@ Uma aplicação web divertida onde usuários podem fazer upload de uma foto e ge
 - **Propósito**: Criar vídeos virais de pessoas dançando usando IA
 - **Estado Atual**: MVP funcional com autenticação, upload de fotos, geração de vídeo e compartilhamento
 - **Tecnologias**: React, Express, PostgreSQL, Replit Auth, WaveSpeed AI (Kling 2.6)
+- **Limite**: Cada usuário pode gerar apenas UM vídeo (sem sistema de pagamento)
 
 ## Arquitetura do Projeto
 
@@ -19,8 +20,7 @@ client/                      # Frontend React
 │   │   ├── criar.tsx       # Página de upload e criação de vídeo
 │   │   ├── video.tsx       # Visualização de vídeo (autenticado)
 │   │   ├── video-public.tsx # Visualização pública para compartilhamento
-│   │   ├── pagar.tsx       # Página de pagamento PIX
-│   │   └── admin.tsx       # Painel administrativo
+│   │   └── admin.tsx       # Painel administrativo (estatísticas)
 │   ├── components/
 │   │   └── ObjectUploader.tsx # Componente de upload de arquivos
 │   └── hooks/
@@ -45,36 +45,17 @@ shared/
 ## Fluxo Principal
 
 1. **Cadastro/Login**: Usuário entra via Replit Auth
-2. **Primeiro Vídeo Grátis**: Novo usuário recebe 1 crédito automaticamente
-3. **Upload de Foto**: Usuário faz upload de uma foto de si mesmo
-4. **Geração de Vídeo**: Sistema consome 1 crédito e envia para WaveSpeed AI (Kling 2.6 Motion Control)
-5. **Visualização**: Usuário pode assistir, baixar e compartilhar o vídeo
-6. **Pagamento**: Para mais vídeos, usuário paga R$5,00 via PIX
+2. **Upload de Foto**: Usuário faz upload de uma foto de si mesmo
+3. **Geração de Vídeo**: Sistema envia para WaveSpeed AI (Kling 2.6 Motion Control)
+4. **Visualização**: Usuário pode assistir, baixar e compartilhar o vídeo
+5. **Limite**: Cada usuário pode gerar apenas UM vídeo - após isso, a opção de criar é desabilitada
 
-## Sistema de Pagamentos
+## Limite de Um Vídeo por Usuário
 
-- **Modelo Freemium**: Primeiro vídeo grátis, R$5,00 por vídeo adicional
-- **Chave PIX**: 21995571985 (telefone)
-- **Fluxo de Pagamento**:
-  1. Usuário sem créditos é redirecionado para `/pagar`
-  2. Usuário faz PIX usando QR Code ou chave
-  3. Usuário clica "Já paguei" para registrar solicitação
-  4. Admin recebe email com botão de aprovação rápida
-  5. Admin clica no link do email ou aprova em `/admin`
-  6. Usuário recebe 1 crédito automaticamente
-- **Admin**: felipe.vasconcellos@ab-inbev.com (isAdmin = true automático no login)
-- **Notificações**: Email via Resend com link de aprovação rápida
-- **Reembolso Automático**: Se geração falhar, crédito é devolvido
-
-## Proteção Anti-Abuso
-
-- **Limite por IP**: Cada IP pode usar o vídeo grátis apenas 1 vez a cada 30 dias
-- **Regra de Crédito Grátis**: Usuário é considerado "grátis" apenas se:
-  - Não tem vídeos anteriores
-  - Tem exatamente 1 crédito
-  - Nunca teve pagamento aprovado
-- **Registro de IP**: IP é registrado apenas após geração bem-sucedida (não bloqueia em caso de falha)
-- **Usuários Pagantes**: Quem já fez pagamento aprovado não é afetado pelo limite de IP
+- Sistema verifica se usuário já possui vídeos antes de permitir criação
+- Endpoint `/api/user/can-generate` retorna se usuário pode gerar
+- Se usuário já tem vídeo (qualquer status), não pode criar outro
+- Página /criar mostra mensagem amigável se limite foi atingido
 
 ## APIs
 
@@ -87,21 +68,16 @@ shared/
 - `GET /api/videos` - Listar vídeos do usuário
 - `GET /api/videos/:id` - Obter vídeo específico (autenticado)
 - `GET /api/videos/public/:id` - Obter vídeo para compartilhamento público
-- `POST /api/videos/generate` - Iniciar geração de vídeo (consome 1 crédito)
+- `POST /api/videos/generate` - Iniciar geração de vídeo
+
+### Verificação
+- `GET /api/user/can-generate` - Verifica se usuário pode gerar vídeo
 
 ### Upload
 - `POST /api/uploads/request-url` - Obter URL de upload
 
-### Pagamentos
-- `GET /api/user/credits` - Obter créditos do usuário
-- `GET /api/pix-info` - Obter informações do PIX (chave, valor, QR code)
-- `POST /api/payment-requests` - Registrar solicitação de pagamento
-- `GET /api/payment-requests/pending` - Verificar se há pagamento pendente
-
 ### Admin
-- `GET /api/admin/payment-requests` - Listar pagamentos pendentes
-- `POST /api/admin/payment-requests/:id/approve` - Aprovar pagamento
-- `GET /api/admin/quick-approve/:token` - Aprovação rápida via email (sem auth)
+- `GET /api/admin/videos` - Listar todos os vídeos
 - `GET /api/admin/users` - Listar todos usuários
 
 ## Design
@@ -114,7 +90,6 @@ shared/
 ## Secrets Necessários
 
 - `WAVESPEED_API_KEY` - Chave da API WaveSpeed para Kling AI
-- `RESEND_API_KEY` - Chave da API Resend para notificações por email
 - `SESSION_SECRET` - Secret para sessões (gerenciado automaticamente)
 - `DATABASE_URL` - URL do PostgreSQL (gerenciado automaticamente)
 
@@ -122,3 +97,8 @@ shared/
 
 - `npm run dev` - Iniciar servidor de desenvolvimento
 - `npm run db:push` - Sincronizar schema do banco de dados
+
+## Admin
+
+- **Usuário Admin**: felipe.vasconcellos@ab-inbev.com (isAdmin = true automático no login)
+- **Painel**: /admin mostra estatísticas de vídeos e lista de usuários
