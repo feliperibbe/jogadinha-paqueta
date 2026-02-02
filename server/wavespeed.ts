@@ -39,16 +39,11 @@ export class WavespeedService {
   }
 
   private getBaseUrl(): string {
-    // Use Replit's public domain for external access
-    if (process.env.REPLIT_DEV_DOMAIN) {
-      return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    // Use APP_URL if configured (production)
+    if (process.env.APP_URL) {
+      return process.env.APP_URL;
     }
-    if (process.env.REPLIT_DOMAINS) {
-      const domain = process.env.REPLIT_DOMAINS.split(",")[0];
-      if (domain) {
-        return `https://${domain}`;
-      }
-    }
+    // Local development fallback
     return "http://localhost:5000";
   }
 
