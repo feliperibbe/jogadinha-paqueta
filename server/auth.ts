@@ -7,7 +7,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { sendVerificationEmail } from "./email";
 
-const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
+const ADMIN_EMAIL = "felipe.ribbe@gmail.com";
 
 export function getSession() {
   const sessionTtlSeconds = 7 * 24 * 60 * 60; // 1 week in seconds

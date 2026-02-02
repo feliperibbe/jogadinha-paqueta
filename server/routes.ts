@@ -12,7 +12,7 @@ const generateVideoSchema = z.object({
   imagePath: z.string().min(1, "Caminho da imagem é obrigatório"),
 });
 
-const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
+const ADMIN_EMAIL = "felipe.ribbe@gmail.com";
 
 const isAdminMiddleware = async (req: any, res: Response, next: NextFunction) => {
   if (!req.user) {

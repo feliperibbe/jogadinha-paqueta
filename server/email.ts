@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
+const ADMIN_EMAIL = "felipe.ribbe@gmail.com";
 
 let resend: Resend | null = null;
 
