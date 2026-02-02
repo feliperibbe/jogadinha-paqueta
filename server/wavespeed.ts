@@ -53,7 +53,11 @@ export class WavespeedService {
   }
 
   private getReferenceVideoUrl(): string {
-    // Use our Express server endpoint which proxies the video
+    // Use external URL if provided (required for WaveSpeed API to access)
+    if (process.env.REFERENCE_VIDEO_URL) {
+      return process.env.REFERENCE_VIDEO_URL;
+    }
+    // Fallback to local endpoint (only works if publicly accessible)
     const baseUrl = this.getBaseUrl();
     return `${baseUrl}/api/reference-video`;
   }

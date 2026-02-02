@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { wavespeedService } from "./wavespeed";
+import path from "path";
+import fs from "fs";
 
 const generateVideoSchema = z.object({
   imagePath: z.string().min(1, "Caminho da imagem é obrigatório"),
@@ -34,37 +36,57 @@ export async function registerRoutes(
 
   const objectStorageService = new ObjectStorageService();
 
-  app.get("/api/reference-video", async (req, res) => {
-    try {
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ message: "Storage not configured" });
-      }
+  // Helper function to serve video files with range support
+  const serveVideo = (videoPath: string, req: Request, res: Response) => {
+    if (!fs.existsSync(videoPath)) {
+      console.error("Video not found at:", videoPath);
+      return res.status(404).json({ message: "Video not found" });
+    }
 
-      const { objectStorageClient } = await import("./replit_integrations/object_storage/objectStorage");
-      const bucket = objectStorageClient.bucket(bucketId);
-      const file = bucket.file("public/reference-dance.mp4");
+    const stat = fs.statSync(videoPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
 
-      const [exists] = await file.exists();
-      if (!exists) {
-        return res.status(404).json({ message: "Reference video not found" });
-      }
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
 
-      const [metadata] = await file.getMetadata();
-      res.set({
+      const stream = fs.createReadStream(videoPath, { start, end });
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunkSize,
         "Content-Type": "video/mp4",
-        "Content-Length": metadata.size,
-        "Cache-Control": "public, max-age=86400",
-      });
-
-      const stream = file.createReadStream();
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Error streaming video" });
-        }
       });
       stream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        "Content-Length": fileSize,
+        "Content-Type": "video/mp4",
+        "Cache-Control": "public, max-age=86400",
+      });
+      fs.createReadStream(videoPath).pipe(res);
+    }
+  };
+
+  // Video de fundo da landing page
+  app.get("/api/background-video", async (req, res) => {
+    try {
+      const videoPath = path.join(process.cwd(), "Videos", "vídeo fundo tela inicial.mp4");
+      serveVideo(videoPath, req, res);
+    } catch (error) {
+      console.error("Error serving background video:", error);
+      res.status(500).json({ message: "Error serving video" });
+    }
+  });
+
+  // Video de referencia para geracao de IA
+  app.get("/api/reference-video", async (req, res) => {
+    try {
+      const videoPath = path.join(process.cwd(), "Videos", "vídeo referencia.mp4");
+      serveVideo(videoPath, req, res);
     } catch (error) {
       console.error("Error serving reference video:", error);
       res.status(500).json({ message: "Error serving video" });

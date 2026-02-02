@@ -29,7 +29,7 @@ export default function Landing() {
             className="absolute inset-0 w-full h-full object-cover"
             data-testid="video-background"
           >
-            <source src="/api/reference-video" type="video/mp4" />
+            <source src="/api/background-video" type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-black/60" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-background" />
