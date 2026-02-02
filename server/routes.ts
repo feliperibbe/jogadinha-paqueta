@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
-import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import { registerUploadRoutes } from "./uploads";
 import { wavespeedService } from "./wavespeed";
 import path from "path";
 import fs from "fs";
@@ -32,9 +32,7 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
   
-  registerObjectStorageRoutes(app);
-
-  const objectStorageService = new ObjectStorageService();
+  registerUploadRoutes(app);
 
   // Helper function to serve video files with range support
   const serveVideo = (videoPath: string, req: Request, res: Response) => {

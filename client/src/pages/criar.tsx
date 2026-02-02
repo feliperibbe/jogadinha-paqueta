@@ -150,34 +150,25 @@ export default function Criar() {
     setUploadProgress(10);
 
     try {
-      const urlResponse = await fetch("/api/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: selectedFile.name,
-          size: selectedFile.size,
-          contentType: selectedFile.type,
-        }),
-      });
+      // Upload file using FormData
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-      if (!urlResponse.ok) {
-        throw new Error("Erro ao preparar upload");
-      }
-
-      const { uploadURL, objectPath } = await urlResponse.json();
       setUploadProgress(30);
 
-      const uploadResponse = await fetch(uploadURL, {
-        method: "PUT",
-        body: selectedFile,
-        headers: { "Content-Type": selectedFile.type },
+      const uploadResponse = await fetch("/api/uploads/image", {
+        method: "POST",
+        body: formData,
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Erro ao enviar imagem");
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao enviar imagem");
       }
 
+      const { objectPath } = await uploadResponse.json();
       setUploadProgress(70);
+      
       await generateVideoMutation.mutateAsync(objectPath);
       setUploadProgress(100);
     } catch (error: any) {
