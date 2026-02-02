@@ -146,18 +146,35 @@ export async function registerRoutes(
   app.get("/api/user/can-generate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const user = await storage.getUser(userId);
       const videos = await storage.getVideosByUserId(userId);
       
       const hasVideo = videos.length > 0;
       const hasCompletedVideo = videos.some(v => v.status === "completed");
       const hasPendingVideo = videos.some(v => v.status === "pending" || v.status === "processing");
+      const emailVerified = user?.emailVerified || false;
+
+      // Check IP
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+        || req.socket?.remoteAddress 
+        || 'unknown';
+      
+      let ipAlreadyUsed = false;
+      if (clientIp !== 'unknown') {
+        const existingVideoByIp = await storage.getVideoByIpAddress(clientIp);
+        ipAlreadyUsed = !!existingVideoByIp;
+      }
+
+      const canGenerate = !hasVideo && emailVerified && !ipAlreadyUsed;
       
       res.json({ 
-        canGenerate: !hasVideo,
+        canGenerate,
         hasVideo,
         hasCompletedVideo,
         hasPendingVideo,
-        videoCount: videos.length
+        videoCount: videos.length,
+        emailVerified,
+        ipAlreadyUsed,
       });
     } catch (error) {
       console.error("Error checking generation eligibility:", error);
@@ -174,12 +191,37 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
+      // Check if email is verified
+      if (!user.emailVerified) {
+        return res.status(403).json({ 
+          message: "Por favor, verifique seu email antes de gerar vídeos.",
+          emailNotVerified: true
+        });
+      }
+
+      // Check if user already has a video
       const existingVideos = await storage.getVideosByUserId(userId);
       if (existingVideos.length > 0) {
         return res.status(403).json({ 
           message: "Você já gerou seu vídeo. Cada usuário pode gerar apenas um vídeo.",
           alreadyGenerated: true
         });
+      }
+
+      // Get client IP address
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+        || req.socket?.remoteAddress 
+        || 'unknown';
+
+      // Check if this IP already generated a video
+      if (clientIp !== 'unknown') {
+        const existingVideoByIp = await storage.getVideoByIpAddress(clientIp);
+        if (existingVideoByIp) {
+          return res.status(403).json({ 
+            message: "Este dispositivo já foi usado para gerar um vídeo. Cada dispositivo pode gerar apenas um vídeo.",
+            ipAlreadyUsed: true
+          });
+        }
       }
       
       const parseResult = generateVideoSchema.safeParse(req.body);
@@ -195,6 +237,7 @@ export async function registerRoutes(
         userId,
         sourceImagePath: imagePath,
         status: "pending",
+        ipAddress: clientIp !== 'unknown' ? clientIp : null,
       });
 
       res.json(video);

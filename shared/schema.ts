@@ -26,6 +26,7 @@ export const generatedVideos = pgTable("generated_videos", {
   status: varchar("status", { length: 50 }).notNull().default("pending"),
   wavespeedRequestId: text("wavespeed_request_id"),
   errorMessage: text("error_message"),
+  ipAddress: varchar("ip_address", { length: 45 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -2,8 +2,10 @@ import type { Express, RequestHandler } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
+import { sendVerificationEmail } from "./email";
 
 const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
 
@@ -77,6 +79,10 @@ export function registerAuthRoutes(app: Express) {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       // Create user
       const isAdmin = email === ADMIN_EMAIL;
       const user = await storage.createUser({
@@ -85,14 +91,27 @@ export function registerAuthRoutes(app: Express) {
         firstName,
         lastName: lastName || null,
         isAdmin,
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
       });
 
-      // Set session
+      // Send verification email
+      const emailSent = await sendVerificationEmail({
+        email,
+        firstName,
+        verificationToken,
+      });
+
+      // Set session (user can login but won't be able to generate videos until verified)
       req.session.userId = user.id;
 
       // Return user without password
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({
+        ...userWithoutPassword,
+        verificationEmailSent: emailSent,
+      });
     } catch (error) {
       console.error("Error registering user:", error);
       res.status(500).json({ message: "Erro ao cadastrar usuário" });
@@ -175,6 +194,81 @@ export function registerAuthRoutes(app: Express) {
       res.clearCookie("connect.sid");
       res.redirect("/");
     });
+  });
+
+  // Verify email
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        return res.redirect("/?error=token_missing");
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        return res.redirect("/?error=invalid_token");
+      }
+
+      if (user.emailVerificationExpires && new Date() > user.emailVerificationExpires) {
+        return res.redirect("/?error=token_expired");
+      }
+
+      // Mark email as verified
+      await storage.updateUser(user.id, {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      });
+
+      // Redirect to success page
+      res.redirect("/?verified=true");
+    } catch (error) {
+      console.error("Error verifying email:", error);
+      res.redirect("/?error=verification_failed");
+    }
+  });
+
+  // Resend verification email
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Não autenticado" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email já verificado" });
+      }
+
+      // Generate new verification token
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await storage.updateUser(user.id, {
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
+      });
+
+      // Send verification email
+      const emailSent = await sendVerificationEmail({
+        email: user.email,
+        firstName: user.firstName || "Usuário",
+        verificationToken,
+      });
+
+      if (emailSent) {
+        res.json({ message: "Email de verificação enviado!" });
+      } else {
+        res.status(500).json({ message: "Erro ao enviar email. Tente novamente." });
+      }
+    } catch (error) {
+      console.error("Error resending verification:", error);
+      res.status(500).json({ message: "Erro ao reenviar verificação" });
+    }
   });
 }
 

@@ -12,12 +12,15 @@ import { eq, desc } from "drizzle-orm";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   
   getVideoById(id: string): Promise<GeneratedVideo | undefined>;
   getVideosByUserId(userId: string): Promise<GeneratedVideo[]>;
+  getVideoByIpAddress(ipAddress: string): Promise<GeneratedVideo | undefined>;
   getAllVideos(): Promise<GeneratedVideo[]>;
   createVideo(video: InsertGeneratedVideo): Promise<GeneratedVideo>;
   updateVideo(id: string, updates: Partial<GeneratedVideo>): Promise<GeneratedVideo | undefined>;
@@ -32,6 +35,20 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.emailVerificationToken, token));
+    return user || undefined;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async createUser(userData: UpsertUser): Promise<User> {
@@ -68,6 +85,14 @@ export class DatabaseStorage implements IStorage {
       .from(generatedVideos)
       .where(eq(generatedVideos.userId, userId))
       .orderBy(desc(generatedVideos.createdAt));
+  }
+
+  async getVideoByIpAddress(ipAddress: string): Promise<GeneratedVideo | undefined> {
+    const [video] = await db
+      .select()
+      .from(generatedVideos)
+      .where(eq(generatedVideos.ipAddress, ipAddress));
+    return video || undefined;
   }
 
   async createVideo(video: InsertGeneratedVideo): Promise<GeneratedVideo> {

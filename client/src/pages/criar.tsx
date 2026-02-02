@@ -18,6 +18,8 @@ interface CanGenerateData {
   hasCompletedVideo: boolean;
   hasPendingVideo: boolean;
   videoCount: number;
+  emailVerified: boolean;
+  ipAlreadyUsed: boolean;
 }
 
 export default function Criar() {
@@ -205,8 +207,20 @@ export default function Criar() {
   const firstName = user?.firstName || "Usuário";
   const isProcessing = isUploading || generateVideoMutation.isPending;
   const canGenerate = canGenerateData?.canGenerate ?? true;
+  const emailVerified = canGenerateData?.emailVerified ?? true;
+  const ipAlreadyUsed = canGenerateData?.ipAlreadyUsed ?? false;
+  const hasVideo = canGenerateData?.hasVideo ?? false;
 
-  if (!canGenerate) {
+  // Determine the reason user cannot generate
+  const getBlockedReason = () => {
+    if (!emailVerified) return "email";
+    if (ipAlreadyUsed) return "ip";
+    if (hasVideo) return "video";
+    return null;
+  };
+  const blockedReason = getBlockedReason();
+
+  if (!canGenerate && blockedReason) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
@@ -238,13 +252,39 @@ export default function Criar() {
         <main className="container mx-auto px-4 py-8 max-w-2xl">
           <Card className="text-center">
             <CardContent className="py-12">
-              <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
-              </div>
-              <h2 className="font-display text-2xl mb-2">Você já criou seu vídeo!</h2>
-              <p className="text-muted-foreground mb-6">
-                Cada usuário pode gerar apenas um vídeo. Veja seu vídeo na página inicial.
-              </p>
+              {blockedReason === "email" && (
+                <>
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                    <Upload className="w-10 h-10 text-primary" />
+                  </div>
+                  <h2 className="font-display text-2xl mb-2">Verifique seu email primeiro</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Enviamos um link de verificação para seu email. Confirme para poder criar seu vídeo.
+                  </p>
+                </>
+              )}
+              {blockedReason === "ip" && (
+                <>
+                  <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+                    <X className="w-10 h-10 text-destructive" />
+                  </div>
+                  <h2 className="font-display text-2xl mb-2">Limite atingido</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Este dispositivo já foi usado para gerar um vídeo. Cada dispositivo pode gerar apenas um vídeo.
+                  </p>
+                </>
+              )}
+              {blockedReason === "video" && (
+                <>
+                  <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 className="w-10 h-10 text-green-500" />
+                  </div>
+                  <h2 className="font-display text-2xl mb-2">Você já criou seu vídeo!</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Cada usuário pode gerar apenas um vídeo. Veja seu vídeo na página inicial.
+                  </p>
+                </>
+              )}
               <Button onClick={() => navigate("/")} data-testid="button-go-home">
                 Ver Meu Vídeo
               </Button>

@@ -3,11 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { Sparkles, Video, LogOut, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
+import { Sparkles, Video, LogOut, Clock, CheckCircle2, AlertCircle, Mail, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { GeneratedVideo } from "@shared/schema";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
+import { useEffect } from "react";
 
 function VideoStatusBadge({ status }: { status: string }) {
   switch (status) {
@@ -107,11 +111,58 @@ function VideoCardSkeleton() {
 
 export default function Home() {
   const { user, logout, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [location] = useLocation();
+
+  // Check for URL params (email verification success/error)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("verified") === "true") {
+      toast({
+        title: "Email verificado!",
+        description: "Seu email foi verificado com sucesso. Agora você pode criar seu vídeo!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.history.replaceState({}, "", "/");
+    } else if (params.get("error")) {
+      const error = params.get("error");
+      let message = "Erro ao verificar email";
+      if (error === "token_expired") message = "Link de verificação expirado. Solicite um novo.";
+      if (error === "invalid_token") message = "Link de verificação inválido.";
+      toast({
+        title: "Erro",
+        description: message,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/");
+    }
+  }, [location, toast, queryClient]);
 
   const { data: videos, isLoading: videosLoading } = useQuery<GeneratedVideo[]>({
     queryKey: ["/api/videos"],
     enabled: !!user,
     refetchInterval: 5000,
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/resend-verification");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email enviado!",
+        description: "Verifique sua caixa de entrada.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível enviar o email.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (authLoading) {
@@ -127,6 +178,7 @@ export default function Home() {
 
   const firstName = user?.firstName || "Usuário";
   const hasVideo = videos && videos.length > 0;
+  const emailVerified = user?.emailVerified;
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,6 +208,33 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {!emailVerified && (
+          <Alert className="mb-6 border-primary/50 bg-primary/5" data-testid="alert-email-verification">
+            <Mail className="h-5 w-5 text-primary" />
+            <AlertTitle>Verifique seu email</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-2">
+              <span>
+                Enviamos um link de confirmação para <strong>{user?.email}</strong>. 
+                Verifique para poder criar seu vídeo.
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => resendMutation.mutate()}
+                disabled={resendMutation.isPending}
+                data-testid="button-resend-verification"
+              >
+                {resendMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4 mr-2" />
+                )}
+                Reenviar
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="font-display text-3xl md:text-4xl tracking-wide">
@@ -164,10 +243,12 @@ export default function Home() {
             <p className="text-muted-foreground mt-1">
               {hasVideo 
                 ? "Confira seu vídeo abaixo" 
-                : "Pronto para fazer sua jogadinha?"}
+                : emailVerified 
+                  ? "Pronto para fazer sua jogadinha?"
+                  : "Verifique seu email para continuar"}
             </p>
           </div>
-          {!hasVideo && (
+          {!hasVideo && emailVerified && (
             <Link href="/criar">
               <Button size="lg" data-testid="button-create-video">
                 <Sparkles className="w-5 h-5 mr-2" />
