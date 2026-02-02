@@ -18,14 +18,8 @@ function getResend(): Resend | null {
 function getBaseUrl(): string {
   // Use APP_URL if configured (production)
   if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  // Replit fallbacks
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
-  }
-  if (process.env.REPL_SLUG) {
-    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    // Remove trailing slash to avoid double slashes in URLs
+    return process.env.APP_URL.replace(/\/+$/, '');
   }
   // Local development
   return "http://localhost:5000";

@@ -41,7 +41,8 @@ export class WavespeedService {
   private getBaseUrl(): string {
     // Use APP_URL if configured (production)
     if (process.env.APP_URL) {
-      return process.env.APP_URL;
+      // Remove trailing slash to avoid double slashes in URLs
+      return process.env.APP_URL.replace(/\/+$/, '');
     }
     // Local development fallback
     return "http://localhost:5000";
@@ -59,9 +60,11 @@ export class WavespeedService {
 
   getImageUrl(imagePath: string): string {
     // Use our Express server endpoint which proxies the image
-    // imagePath is like /objects/uploads/uuid
+    // imagePath is like /uploads/uuid.jpg
     const baseUrl = this.getBaseUrl();
-    return `${baseUrl}${imagePath}`;
+    // Ensure imagePath starts with /
+    const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${baseUrl}${normalizedPath}`;
   }
 
   async submitVideoGeneration(imagePath: string): Promise<string> {
