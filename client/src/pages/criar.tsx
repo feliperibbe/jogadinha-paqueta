@@ -211,9 +211,8 @@ export default function Criar() {
   const ipAlreadyUsed = canGenerateData?.ipAlreadyUsed ?? false;
   const hasVideo = canGenerateData?.hasVideo ?? false;
 
-  // Determine the reason user cannot generate
+  // Determine the reason user cannot generate (IP blocking is the main protection)
   const getBlockedReason = () => {
-    if (!emailVerified) return "email";
     if (ipAlreadyUsed) return "ip";
     if (hasVideo) return "video";
     return null;
@@ -252,17 +251,6 @@ export default function Criar() {
         <main className="container mx-auto px-4 py-8 max-w-2xl">
           <Card className="text-center">
             <CardContent className="py-12">
-              {blockedReason === "email" && (
-                <>
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                    <Upload className="w-10 h-10 text-primary" />
-                  </div>
-                  <h2 className="font-display text-2xl mb-2">Verifique seu email primeiro</h2>
-                  <p className="text-muted-foreground mb-6">
-                    Enviamos um link de verificação para seu email. Confirme para poder criar seu vídeo.
-                  </p>
-                </>
-              )}
               {blockedReason === "ip" && (
                 <>
                   <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">

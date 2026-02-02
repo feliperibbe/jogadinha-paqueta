@@ -208,33 +208,6 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {!emailVerified && (
-          <Alert className="mb-6 border-primary/50 bg-primary/5" data-testid="alert-email-verification">
-            <Mail className="h-5 w-5 text-primary" />
-            <AlertTitle>Verifique seu email</AlertTitle>
-            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-2">
-              <span>
-                Enviamos um link de confirmação para <strong>{user?.email}</strong>. 
-                Verifique para poder criar seu vídeo.
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => resendMutation.mutate()}
-                disabled={resendMutation.isPending}
-                data-testid="button-resend-verification"
-              >
-                {resendMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Mail className="w-4 h-4 mr-2" />
-                )}
-                Reenviar
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="font-display text-3xl md:text-4xl tracking-wide">
@@ -243,12 +216,10 @@ export default function Home() {
             <p className="text-muted-foreground mt-1">
               {hasVideo 
                 ? "Confira seu vídeo abaixo" 
-                : emailVerified 
-                  ? "Pronto para fazer sua jogadinha?"
-                  : "Verifique seu email para continuar"}
+                : "Pronto para fazer sua jogadinha?"}
             </p>
           </div>
-          {!hasVideo && emailVerified && (
+          {!hasVideo && (
             <Link href="/criar">
               <Button size="lg" data-testid="button-create-video">
                 <Sparkles className="w-5 h-5 mr-2" />

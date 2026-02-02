@@ -187,7 +187,8 @@ export async function registerRoutes(
         ipAlreadyUsed = !!existingVideoByIp;
       }
 
-      const canGenerate = !hasVideo && emailVerified && !ipAlreadyUsed;
+      // IP blocking is the main protection against abuse (email verification optional)
+      const canGenerate = !hasVideo && !ipAlreadyUsed;
       
       res.json({ 
         canGenerate,
@@ -213,13 +214,13 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
-      // Check if email is verified
-      if (!user.emailVerified) {
-        return res.status(403).json({ 
-          message: "Por favor, verifique seu email antes de gerar vídeos.",
-          emailNotVerified: true
-        });
-      }
+      // Email verification is optional - IP blocking is the main protection
+      // if (!user.emailVerified) {
+      //   return res.status(403).json({ 
+      //     message: "Por favor, verifique seu email antes de gerar vídeos.",
+      //     emailNotVerified: true
+      //   });
+      // }
 
       // Check if user already has a video
       const existingVideos = await storage.getVideosByUserId(userId);
