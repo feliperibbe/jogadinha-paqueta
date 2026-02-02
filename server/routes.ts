@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { wavespeedService } from "./wavespeed";
 
@@ -12,18 +12,12 @@ const generateVideoSchema = z.object({
 
 const ADMIN_EMAIL = "felipe.vasconcellos@ab-inbev.com";
 
-const isAdmin = async (req: any, res: Response, next: NextFunction) => {
+const isAdminMiddleware = async (req: any, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ message: "Não autenticado" });
   }
-  const userId = req.user.claims.sub;
-  let user = await storage.getUser(userId);
   
-  if (!user && req.user.claims.email) {
-    user = await storage.getUserByEmail(req.user.claims.email);
-  }
-  
-  if (!user?.isAdmin) {
+  if (!req.user.isAdmin) {
     return res.status(403).json({ message: "Acesso negado - Admin only" });
   }
   next();
@@ -79,7 +73,7 @@ export async function registerRoutes(
 
   app.get("/api/videos", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const videos = await storage.getVideosByUserId(userId);
       res.json(videos);
     } catch (error) {
@@ -114,7 +108,7 @@ export async function registerRoutes(
 
   app.get("/api/videos/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const video = await storage.getVideoById(req.params.id);
       
       if (!video) {
@@ -151,7 +145,7 @@ export async function registerRoutes(
 
   app.get("/api/user/can-generate", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const videos = await storage.getVideosByUserId(userId);
       
       const hasVideo = videos.length > 0;
@@ -173,7 +167,7 @@ export async function registerRoutes(
 
   app.post("/api/videos/generate", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const user = await storage.getUser(userId);
       if (!user) {
@@ -231,7 +225,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get("/api/admin/users", isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -241,7 +235,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/videos", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get("/api/admin/videos", isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
       const videos = await storage.getAllVideos();
       res.json(videos);
