@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,9 @@ import {
   Shield,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  RotateCcw
 } from "lucide-react";
 import { redirectToLogin } from "@/lib/auth-utils";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
@@ -75,6 +77,38 @@ export default function Admin() {
     queryKey: ["/api/admin/videos"],
     enabled: isAuthenticated,
     refetchInterval: 10000,
+  });
+
+  const queryClient = useQueryClient();
+
+  const deleteVideoMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      const res = await fetch(`/api/admin/videos/${videoId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao deletar vídeo");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/videos"] });
+      toast({ title: "Vídeo deletado com sucesso" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao deletar vídeo", variant: "destructive" });
+    },
+  });
+
+  const resetUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(`/api/admin/reset-user/${userId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao resetar usuário");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/videos"] });
+      toast({ title: data.message || "Usuário resetado com sucesso" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao resetar usuário", variant: "destructive" });
+    },
   });
 
   if (authLoading) {
@@ -205,7 +239,18 @@ export default function Admin() {
                         </p>
                       </div>
                     </div>
-                    <VideoStatusBadge status={video.status} />
+                    <div className="flex items-center gap-2">
+                      <VideoStatusBadge status={video.status} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteVideoMutation.mutate(video.id)}
+                        disabled={deleteVideoMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -254,6 +299,16 @@ export default function Admin() {
                         <p className="text-xs text-muted-foreground">{u.email}</p>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => resetUserMutation.mutate(u.id)}
+                      disabled={resetUserMutation.isPending}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Resetar
+                    </Button>
                   </div>
                 ))}
               </div>

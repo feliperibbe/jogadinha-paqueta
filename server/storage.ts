@@ -24,6 +24,8 @@ export interface IStorage {
   getAllVideos(): Promise<GeneratedVideo[]>;
   createVideo(video: InsertGeneratedVideo): Promise<GeneratedVideo>;
   updateVideo(id: string, updates: Partial<GeneratedVideo>): Promise<GeneratedVideo | undefined>;
+  deleteVideo(id: string): Promise<void>;
+  deleteVideosByUserId(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,6 +120,18 @@ export class DatabaseStorage implements IStorage {
 
   async getAllVideos(): Promise<GeneratedVideo[]> {
     return db.select().from(generatedVideos).orderBy(desc(generatedVideos.createdAt));
+  }
+
+  async deleteVideo(id: string): Promise<void> {
+    await db.delete(generatedVideos).where(eq(generatedVideos.id, id));
+  }
+
+  async deleteVideosByUserId(userId: string): Promise<number> {
+    const result = await db
+      .delete(generatedVideos)
+      .where(eq(generatedVideos.userId, userId))
+      .returning();
+    return result.length;
   }
 }
 

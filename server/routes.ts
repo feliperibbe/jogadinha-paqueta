@@ -309,5 +309,41 @@ export async function registerRoutes(
     }
   });
 
+  // Reset user - delete their videos so they can generate again
+  app.delete("/api/admin/reset-user/:userId", isAuthenticated, isAdminMiddleware, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Delete all videos for this user
+      const deletedCount = await storage.deleteVideosByUserId(userId);
+      
+      res.json({ 
+        success: true, 
+        message: `Usuário resetado. ${deletedCount} vídeo(s) deletado(s).`,
+        deletedCount 
+      });
+    } catch (error) {
+      console.error("Error resetting user:", error);
+      res.status(500).json({ message: "Erro ao resetar usuário" });
+    }
+  });
+
+  // Delete video by ID
+  app.delete("/api/admin/videos/:videoId", isAuthenticated, isAdminMiddleware, async (req: any, res) => {
+    try {
+      const { videoId } = req.params;
+      
+      await storage.deleteVideo(videoId);
+      
+      res.json({ 
+        success: true, 
+        message: "Vídeo deletado com sucesso" 
+      });
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      res.status(500).json({ message: "Erro ao deletar vídeo" });
+    }
+  });
+
   return httpServer;
 }
