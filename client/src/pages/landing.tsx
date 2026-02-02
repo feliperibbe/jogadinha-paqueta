@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, Share2, Sparkles } from "lucide-react";
+import { Link } from "wouter";
 import logoImage from "@assets/Gemini_Generated_Image_xrvv7yxrvv7yxrvv_1769958024585.png";
 
 export default function Landing() {
@@ -12,9 +13,9 @@ export default function Landing() {
             <img src={logoImage} alt="Logo" className="w-10 h-10 rounded-md object-cover" />
             <span className="font-display text-2xl tracking-wide">JOGADINHA DO PAQUETÁ</span>
           </div>
-          <Button asChild data-testid="button-login-header">
-            <a href="/api/login">Entrar</a>
-          </Button>
+          <Link href="/login">
+            <Button data-testid="button-login-header">Entrar</Button>
+          </Link>
         </div>
       </header>
 
@@ -42,9 +43,11 @@ export default function Landing() {
               <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl mx-auto drop-shadow">
                 Envie sua foto, espere alguns minutos e dance igual ao Paquetá!
               </p>
-              <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-hero">
-                <a href="/api/login">Começar Agora</a>
-              </Button>
+              <Link href="/cadastro">
+                <Button size="lg" className="text-lg px-8" data-testid="button-start-hero">
+                  Começar Agora
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -96,9 +99,11 @@ export default function Landing() {
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               Crie sua conta grátis e comece a fazer seus vídeos agora mesmo!
             </p>
-            <Button size="lg" asChild className="text-lg px-8" data-testid="button-start-bottom">
-              <a href="/api/login">Criar Minha Conta</a>
-            </Button>
+            <Link href="/cadastro">
+              <Button size="lg" className="text-lg px-8" data-testid="button-start-bottom">
+                Criar Minha Conta
+              </Button>
+            </Link>
           </div>
         </section>
       </main>

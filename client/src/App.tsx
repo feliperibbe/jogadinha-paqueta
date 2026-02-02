@@ -10,6 +10,8 @@ import Criar from "@/pages/criar";
 import Admin from "@/pages/admin";
 import VideoPage from "@/pages/video";
 import VideoPublicPage from "@/pages/video-public";
+import Login from "@/pages/login";
+import Cadastro from "@/pages/cadastro";
 import NotFound from "@/pages/not-found";
 import { Sparkles } from "lucide-react";
 
@@ -43,6 +45,8 @@ function UnauthenticatedRouter() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/login" component={Login} />
+      <Route path="/cadastro" component={Cadastro} />
       <Route path="/compartilhar/:id" component={VideoPublicPage} />
       <Route component={Landing} />
     </Switch>

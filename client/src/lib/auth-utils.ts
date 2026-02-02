@@ -7,11 +7,11 @@ export function redirectToLogin(toast?: (options: { title: string; description: 
   if (toast) {
     toast({
       title: "Sessão expirada",
-      description: "Fazendo login novamente...",
+      description: "Por favor, faça login novamente.",
       variant: "destructive",
     });
   }
   setTimeout(() => {
-    window.location.href = "/api/login";
+    window.location.href = "/login";
   }, 500);
 }
