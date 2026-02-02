@@ -16,11 +16,19 @@ function getResend(): Resend | null {
 }
 
 function getBaseUrl(): string {
-  return process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : "http://localhost:5000";
+  // Use APP_URL if configured (production)
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // Replit fallbacks
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  if (process.env.REPL_SLUG) {
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+  }
+  // Local development
+  return "http://localhost:5000";
 }
 
 interface EmailVerificationData {
@@ -117,11 +125,7 @@ export async function sendPaymentNotification(data: PaymentNotificationData): Pr
     return false;
   }
 
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : "http://localhost:5000";
+  const baseUrl = getBaseUrl();
 
   const approvalLink = `${baseUrl}/api/admin/quick-approve/${data.approvalToken}`;
 
