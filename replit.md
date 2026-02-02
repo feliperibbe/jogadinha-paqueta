@@ -44,26 +44,55 @@ shared/
 
 ## Fluxo Principal
 
-1. **Cadastro/Login**: Usuário cria conta com email/senha no app ou faz login
-2. **Upload de Foto**: Usuário faz upload de uma foto de si mesmo
-3. **Geração de Vídeo**: Sistema envia para WaveSpeed AI (Kling 2.6 Motion Control)
-4. **Visualização**: Usuário pode assistir, baixar e compartilhar o vídeo
-5. **Limite**: Cada usuário pode gerar apenas UM vídeo - após isso, a opção de criar é desabilitada
+1. **Cadastro**: Usuário cria conta com email/senha e recebe email de verificação
+2. **Verificação de Email**: Usuário clica no link de verificação (válido por 24 horas)
+3. **Login**: Usuário faz login após verificar email
+4. **Upload de Foto**: Usuário faz upload de uma foto de si mesmo
+5. **Geração de Vídeo**: Sistema envia para WaveSpeed AI (Kling 2.6 Motion Control)
+6. **Visualização**: Usuário pode assistir, baixar e compartilhar o vídeo
+7. **Limite**: Cada usuário E cada dispositivo (IP) pode gerar apenas UM vídeo
 
-## Limite de Um Vídeo por Usuário
+## Verificação de Email
 
+- **Cadastro**: Envia email de verificação automaticamente via Resend API
+- **Token**: Gerado com crypto.randomBytes(32), válido por 24 horas
+- **Reenvio**: Botão na home page para reenviar verificação
+- **Bloqueio**: Usuários não verificados não podem gerar vídeos
+- **Normalização**: Emails são normalizados (lowercase + trim) no cadastro e login
+
+## Limite de Vídeos (Dupla Verificação)
+
+### Por Usuário
 - Sistema verifica se usuário já possui vídeos antes de permitir criação
-- Endpoint `/api/user/can-generate` retorna se usuário pode gerar
 - Se usuário já tem vídeo (qualquer status), não pode criar outro
-- Página /criar mostra mensagem amigável se limite foi atingido
+
+### Por IP (Dispositivo)
+- IP é capturado e armazenado ao gerar vídeo
+- Sistema verifica se IP já foi usado para gerar vídeo
+- Previne criação de múltiplas contas no mesmo dispositivo
+
+### Endpoint de Verificação
+- `GET /api/user/can-generate` retorna:
+  - `canGenerate`: boolean - pode gerar?
+  - `hasVideo`: boolean - já tem vídeo?
+  - `emailVerified`: boolean - email verificado?
+  - `ipAlreadyUsed`: boolean - IP já usado?
+
+### Mensagens na UI
+- Página /criar mostra mensagens específicas para cada bloqueio:
+  - Email não verificado
+  - IP já usado (dispositivo)
+  - Vídeo já gerado
 
 ## APIs
 
 ### Autenticação (Sistema Próprio)
-- `POST /api/auth/register` - Criar nova conta (email, senha, nome)
+- `POST /api/auth/register` - Criar nova conta (envia email de verificação)
 - `POST /api/auth/login` - Login com email/senha
 - `POST /api/auth/logout` - Fazer logout
 - `GET /api/auth/user` - Obter usuário atual
+- `GET /api/auth/verify-email?token=xxx` - Verificar email
+- `POST /api/auth/resend-verification` - Reenviar email de verificação
 
 ### Páginas de Auth
 - `/login` - Página de login
@@ -95,6 +124,7 @@ shared/
 ## Secrets Necessários
 
 - `WAVESPEED_API_KEY` - Chave da API WaveSpeed para Kling AI
+- `RESEND_API_KEY` - Chave da API Resend para envio de emails
 - `SESSION_SECRET` - Secret para sessões (gerenciado automaticamente)
 - `DATABASE_URL` - URL do PostgreSQL (gerenciado automaticamente)
 
