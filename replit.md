@@ -5,8 +5,8 @@ Uma aplicação web divertida onde usuários podem fazer upload de uma foto e ge
 ## Overview
 
 - **Propósito**: Criar vídeos virais de pessoas dançando usando IA
-- **Estado Atual**: MVP funcional com autenticação, upload de fotos, geração de vídeo e compartilhamento
-- **Tecnologias**: React, Express, PostgreSQL, Replit Auth, WaveSpeed AI (Kling 2.6)
+- **Estado Atual**: MVP funcional com autenticação própria, upload de fotos, geração de vídeo e compartilhamento
+- **Tecnologias**: React, Express, PostgreSQL, Autenticação própria (email/senha com bcrypt), WaveSpeed AI (Kling 2.6)
 - **Limite**: Cada usuário pode gerar apenas UM vídeo (sem sistema de pagamento)
 
 ## Arquitetura do Projeto
@@ -29,11 +29,11 @@ client/                      # Frontend React
 
 server/                      # Backend Express
 ├── routes.ts               # Rotas da API
+├── auth.ts                 # Sistema de autenticação próprio (bcrypt + sessions)
 ├── storage.ts              # Operações de banco de dados
 ├── wavespeed.ts            # Integração com WaveSpeed/Kling AI
 ├── db.ts                   # Conexão com PostgreSQL
 └── replit_integrations/    # Integrações do Replit
-    ├── auth/               # Autenticação Replit
     └── object_storage/     # Armazenamento de objetos
 
 shared/
@@ -44,7 +44,7 @@ shared/
 
 ## Fluxo Principal
 
-1. **Cadastro/Login**: Usuário entra via Replit Auth
+1. **Cadastro/Login**: Usuário cria conta com email/senha no app ou faz login
 2. **Upload de Foto**: Usuário faz upload de uma foto de si mesmo
 3. **Geração de Vídeo**: Sistema envia para WaveSpeed AI (Kling 2.6 Motion Control)
 4. **Visualização**: Usuário pode assistir, baixar e compartilhar o vídeo
@@ -59,10 +59,15 @@ shared/
 
 ## APIs
 
-### Autenticação
-- `GET /api/login` - Iniciar fluxo de login
-- `GET /api/logout` - Fazer logout
+### Autenticação (Sistema Próprio)
+- `POST /api/auth/register` - Criar nova conta (email, senha, nome)
+- `POST /api/auth/login` - Login com email/senha
+- `POST /api/auth/logout` - Fazer logout
 - `GET /api/auth/user` - Obter usuário atual
+
+### Páginas de Auth
+- `/login` - Página de login
+- `/cadastro` - Página de cadastro
 
 ### Vídeos
 - `GET /api/videos` - Listar vídeos do usuário
